@@ -1,0 +1,28 @@
+{
+  "checkedAt": "2026-05-14",
+  "status": "online_fields_detected_but_not_calculated",
+  "reason": "线上文档没有提供当前环境可直接导出的 CSV / Excel 明细。腾讯文档返回的是压缩工作簿对象，可以识别字段名，但无法可靠还原完整单元格矩阵；金山文档链接返回 WPS 登录页。",
+  "localDataUsed": {
+    "source": "data-bundle.js",
+    "rows": 458738,
+    "dateRange": ["2026-01-01", "2026-05-14"],
+    "fields": ["日期", "经销商", "店铺", "商品编码", "商品名称", "数量", "GMV", "省", "市", "区县", "产品大类", "产品名称", "年份", "月份", "日"]
+  },
+  "onlineSources": [
+    {
+      "name": "腾讯文档：太太乐餐饮销售追踪表",
+      "url": "https://docs.qq.com/sheet/DRVFLeGxBa0FBUUdt",
+      "accessResult": "可读取页面和压缩工作簿对象，权限显示不可导出",
+      "detectedSheets": ["总计", "天猫日报", "拼多多旗舰店日报", "拼多多专卖店日报", "拼多多链接追踪", "微信小店"],
+      "detectedMetricFields": ["销售额", "退款", "Net GMV", "CVR", "客单价", "支付买家数", "UV", "推广数据", "投放金额", "成交金额", "ROI", "退款率", "费比", "去退费比"],
+      "calculationStatus": "未纳入数值计算"
+    },
+    {
+      "name": "金山文档日报链接",
+      "urlPattern": "https://www.kdocs.cn/l/...",
+      "accessResult": "返回 WPS 登录页",
+      "calculationStatus": "未纳入数值计算"
+    }
+  ],
+  "nextStepToUseOnlineMetrics": "请将线上文档导出为 CSV / Excel 放入 /Users/chenjiwei/Desktop/日数据，或提供可公开导出的文件链接。build_data.py 已支持识别访客、转化率、推广花费、曝光、点击等字段。"
+}

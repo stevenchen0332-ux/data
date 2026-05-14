@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>太太乐全渠道经营驾驶舱</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="side-nav" aria-label="驾驶舱导航">
+        <div class="brand-block">
+          <div class="brand-mark">D</div>
+          <div>
+            <p class="eyebrow">Channel Daily Shipment</p>
+            <h1>太太乐驾驶舱</h1>
+          </div>
+        </div>
+
+        <nav class="module-nav">
+          <button class="nav-item active" data-module="overview" type="button">
+            <span class="nav-icon">01</span>
+            <span>经营总览</span>
+          </button>
+          <button class="nav-item" data-module="channel" type="button">
+            <span class="nav-icon">02</span>
+            <span>渠道归因</span>
+          </button>
+          <button class="nav-item" data-module="product" type="button">
+            <span class="nav-icon">03</span>
+            <span>商品经营</span>
+          </button>
+          <button class="nav-item" data-module="anomaly" type="button">
+            <span class="nav-icon">04</span>
+            <span>异常监控</span>
+          </button>
+          <button class="nav-item" data-module="recommendation" type="button">
+            <span class="nav-icon">05</span>
+            <span>经营建议</span>
+          </button>
+        </nav>
+
+        <div class="side-note">
+          <span class="status-dot"></span>
+          <span id="dataHealthText">正在加载发布数据</span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="top-bar">
+          <div>
+            <p class="eyebrow">发布版静态经营看板</p>
+            <h2>太太乐全渠道经营驾驶舱</h2>
+          </div>
+          <div class="header-actions">
+            <input id="csvInput" class="publish-hidden" type="file" accept=".csv,text/csv" multiple />
+            <button id="reloadDataBtn" class="icon-button publish-hidden" type="button">刷新数据</button>
+            <button id="resetFiltersBtn" class="ghost-button" type="button">重置筛选</button>
+            <button id="exportBtn" class="primary-button" type="button" disabled>导出明细</button>
+          </div>
+        </header>
+
+        <section id="uploadPanel" class="upload-panel publish-hidden">
+          <div id="dropZone" class="drop-zone">
+            <div>
+              <p class="upload-title">已内置发布数据包</p>
+              <p class="upload-copy">页面加载同目录 <strong>data-bundle.js</strong>，不依赖后端，也不读取访问者本机文件。</p>
+            </div>
+            <div class="upload-controls">
+              <label class="select-label" for="encodingSelect">编码</label>
+              <select id="encodingSelect">
+                <option value="UTF-8">UTF-8</option>
+                <option value="GBK">GBK / Excel 中文 CSV</option>
+              </select>
+              <button id="reloadDataPanelBtn" class="secondary-button" type="button">刷新数据</button>
+            </div>
+          </div>
+          <div id="fieldStatus" class="field-status hidden"></div>
+        </section>
+
+        <section class="filter-bar" aria-label="全局筛选">
+          <div class="filter-field">
+            <label for="monthFilter">月份</label>
+            <select id="monthFilter" disabled>
+              <option value="all">全部月份</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="startDateFilter">开始日期</label>
+            <input id="startDateFilter" type="date" disabled />
+          </div>
+          <div class="filter-field">
+            <label for="endDateFilter">结束日期</label>
+            <input id="endDateFilter" type="date" disabled />
+          </div>
+          <div class="filter-field">
+            <label for="compareStartDateFilter">对比开始</label>
+            <input id="compareStartDateFilter" type="date" disabled />
+          </div>
+          <div class="filter-field">
+            <label for="compareEndDateFilter">对比结束</label>
+            <input id="compareEndDateFilter" type="date" disabled />
+          </div>
+          <div class="filter-field">
+            <label for="channelFilter">渠道</label>
+            <select id="channelFilter" disabled>
+              <option value="all">全部渠道</option>
+            </select>
+          </div>
+          <div class="filter-field optional-filter hidden" id="brandFilterWrap">
+            <label for="brandFilter">品牌</label>
+            <select id="brandFilter" disabled>
+              <option value="all">全部品牌</option>
+            </select>
+          </div>
+          <div class="filter-field optional-filter hidden" id="regionFilterWrap">
+            <label for="regionFilter">地区</label>
+            <select id="regionFilter" disabled>
+              <option value="all">全部地区</option>
+            </select>
+          </div>
+          <div class="filter-field search-field">
+            <label for="productSearch">商品搜索</label>
+            <input id="productSearch" type="search" placeholder="输入商品名或编码" disabled />
+          </div>
+        </section>
+
+        <section class="meta-strip">
+          <div>
+            <span class="meta-label">数据范围</span>
+            <strong id="dateRangeText">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">已合并记录</span>
+            <strong id="recordCountText">0</strong>
+          </div>
+          <div>
+            <span class="meta-label">当前筛选</span>
+            <strong id="filteredCountText">0</strong>
+          </div>
+          <div>
+            <span class="meta-label">数据文件</span>
+            <strong id="fileCountText">0</strong>
+          </div>
+        </section>
+
+        <section id="emptyState" class="empty-state">
+          <h3>等待数据</h3>
+          <p>发布数据加载后将自动生成经营总览、渠道归因、商品分层、异常识别和 3 个当前最需要关注的问题。</p>
+        </section>
+
+        <div id="dashboardContent" class="dashboard-content hidden">
+          <nav class="story-nav" aria-label="故事分段导航">
+            <button class="nav-item story-tab active" data-module="overview" type="button">经营总览</button>
+            <button class="nav-item story-tab" data-module="channel" type="button">渠道归因</button>
+            <button class="nav-item story-tab" data-module="product" type="button">商品经营</button>
+            <button class="nav-item story-tab" data-module="anomaly" type="button">异常监控</button>
+            <button class="nav-item story-tab" data-module="recommendation" type="button">经营建议</button>
+          </nav>
+
+          <section id="overview" class="module-section active">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Overview</p>
+                <h3>经营总览</h3>
+              </div>
+              <p id="overviewConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="kpi-grid">
+              <article class="kpi-card">
+                <span class="kpi-label">累计 GMV</span>
+                <strong id="kpiGmv">-</strong>
+                <small id="kpiGmvSub">-</small>
+                <div id="sparkGmvChart" class="kpi-spark"></div>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">累计出货数量</span>
+                <strong id="kpiQty">-</strong>
+                <small id="kpiQtySub">-</small>
+                <div id="sparkQtyChart" class="kpi-spark"></div>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">订单 / 发货单数</span>
+                <strong id="kpiOrders">-</strong>
+                <small id="kpiOrdersSub">-</small>
+                <div id="sparkOrderChart" class="kpi-spark"></div>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">平均单价</span>
+                <strong id="kpiAvgPrice">-</strong>
+                <small>GMV / 出货数量</small>
+                <div id="sparkAvgPriceChart" class="kpi-spark"></div>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">日均 GMV</span>
+                <strong id="kpiDailyAvg">-</strong>
+                <small id="kpiDailyAvgSub">-</small>
+                <div id="sparkDailyAvgChart" class="kpi-spark"></div>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">当前周期 vs 对比周期</span>
+                <strong id="kpiMom">-</strong>
+                <small id="kpiMomSub">-</small>
+                <div id="sparkMomChart" class="kpi-spark"></div>
+              </article>
+            </div>
+
+            <div class="overview-story-grid">
+              <article class="chart-card overview-rank-card">
+                <div class="card-title compact-title">
+                  <h4>渠道表现</h4>
+                  <span>GMV 排名</span>
+                </div>
+                <div id="overviewChannelRankChart" class="chart story-side-chart"></div>
+              </article>
+              <article class="chart-card overview-main-card">
+                <div class="card-title compact-title">
+                  <h4>经销商日表现</h4>
+                  <span>按日堆叠 GMV</span>
+                </div>
+                <div id="channelDailyStackChart" class="chart story-main-chart"></div>
+              </article>
+              <article class="chart-card overview-rank-card">
+                <div class="card-title compact-title">
+                  <h4>单品表现</h4>
+                  <span>TOP 商品</span>
+                </div>
+                <div id="overviewProductRankChart" class="chart story-side-chart"></div>
+              </article>
+              <article class="chart-card concentration-card">
+                <div class="card-title compact-title">
+                  <h4>订单金额集中度</h4>
+                  <span>按订单或明细金额分桶</span>
+                </div>
+                <div id="orderAmountBucketChart" class="chart story-mini-chart"></div>
+              </article>
+              <article class="chart-card concentration-card">
+                <div class="card-title compact-title">
+                  <h4>商品 GMV 集中度</h4>
+                  <span>TOP 商品占比</span>
+                </div>
+                <div id="productShareDonutChart" class="chart story-mini-chart"></div>
+              </article>
+              <article class="chart-card price-trend-card">
+                <div class="card-title compact-title">
+                  <h4>价格和销售趋势</h4>
+                  <span>GMV × 平均单价</span>
+                </div>
+                <div id="priceSalesTrendChart" class="chart story-mini-chart"></div>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>最近 7 日 GMV 趋势</h4>
+                  <span>点击日期可联动筛选</span>
+                </div>
+                <div id="recentTrendChart" class="chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>月累计 GMV 趋势</h4>
+                  <span id="monthTrendLabel">-</span>
+                </div>
+                <div id="monthlyCumulativeChart" class="chart"></div>
+              </article>
+            </div>
+
+            <article class="insight-card">
+              <h4>自动经营结论</h4>
+              <ul id="overviewInsights" class="insight-list"></ul>
+            </article>
+          </section>
+
+          <section id="channel" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Channel Attribution</p>
+                <h3>渠道表现</h3>
+              </div>
+              <p id="channelConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="summary-grid">
+              <article class="summary-card">
+                <span>贡献最大渠道</span>
+                <strong id="topChannelName">-</strong>
+                <small id="topChannelDesc">-</small>
+              </article>
+              <article class="summary-card">
+                <span>增长最快渠道</span>
+                <strong id="fastChannelName">-</strong>
+                <small id="fastChannelDesc">-</small>
+              </article>
+              <article class="summary-card danger">
+                <span>拖累最大渠道</span>
+                <strong id="dragChannelName">-</strong>
+                <small id="dragChannelDesc">-</small>
+              </article>
+              <article class="summary-card">
+                <span>渠道集中度</span>
+                <strong id="channelConcentration">-</strong>
+                <small id="channelConcentrationDesc">-</small>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>各渠道 GMV 排名</h4>
+                  <span>点击渠道可联动筛选</span>
+                </div>
+                <div id="channelGmvChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>各渠道出货数量排名</h4>
+                  <span>按当前筛选范围计算</span>
+                </div>
+                <div id="channelQtyChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>各渠道增长率</h4>
+                  <span>基于当前周期与对比周期</span>
+                </div>
+                <div id="channelGrowthChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>各渠道增长贡献</h4>
+                  <span>GMV 增量 / 减量</span>
+                </div>
+                <div id="channelContributionChart" class="chart tall-chart"></div>
+              </article>
+            </div>
+
+            <article class="table-card">
+              <div class="card-title">
+                <h4>渠道经营明细</h4>
+                <span id="channelTableNote">-</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>渠道</th>
+                      <th>GMV</th>
+                      <th>出货数量</th>
+                      <th>GMV 占比</th>
+                      <th>环比</th>
+                      <th>增长贡献</th>
+                    </tr>
+                  </thead>
+                  <tbody id="channelTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <section id="product" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Product Portfolio</p>
+                <h3>商品表现</h3>
+              </div>
+              <p id="productConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="summary-grid">
+              <article class="summary-card">
+                <span>核心爆品</span>
+                <strong id="heroProductCount">-</strong>
+                <small id="heroProductDesc">-</small>
+              </article>
+              <article class="summary-card">
+                <span>增长潜力品</span>
+                <strong id="potentialProductCount">-</strong>
+                <small id="potentialProductDesc">-</small>
+              </article>
+              <article class="summary-card danger">
+                <span>下滑风险品</span>
+                <strong id="riskProductCount">-</strong>
+                <small id="riskProductDesc">-</small>
+              </article>
+              <article class="summary-card">
+                <span>单品集中度</span>
+                <strong id="productConcentration">-</strong>
+                <small id="productConcentrationDesc">-</small>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>TOP 商品 GMV</h4>
+                  <span>点击商品可联动筛选</span>
+                </div>
+                <div id="productGmvChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>TOP 商品出货数量</h4>
+                  <span>按当前筛选范围计算</span>
+                </div>
+                <div id="productQtyChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>商品环比增长 / 下滑</h4>
+                  <span>GMV 增量排序</span>
+                </div>
+                <div id="productGrowthChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>商品组合分层</h4>
+                  <span>GMV × 出货数量</span>
+                </div>
+                <div id="productMatrixChart" class="chart tall-chart"></div>
+              </article>
+            </div>
+
+            <article class="table-card">
+              <div class="card-title">
+                <h4>商品分层明细</h4>
+                <span>核心爆品 / 增长潜力品 / 下滑风险品 / 长尾低效品</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>商品</th>
+                      <th>编码</th>
+                      <th>分类</th>
+                      <th>GMV</th>
+                      <th>出货数量</th>
+                      <th>环比</th>
+                      <th>GMV 占比</th>
+                    </tr>
+                  </thead>
+                  <tbody id="productTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <section id="anomaly" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Anomaly & Opportunity</p>
+                <h3>异常与机会</h3>
+              </div>
+              <p id="anomalyConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>每日 GMV 异常高点 / 低点</h4>
+                  <span>基于箱线阈值与相对极值</span>
+                </div>
+                <div id="dailyAnomalyChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>近 7 日均值偏离</h4>
+                  <span>高于 / 低于近 7 日均值</span>
+                </div>
+                <div id="rollingAverageChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>异常渠道</h4>
+                  <span>环比波动较大的渠道</span>
+                </div>
+                <div id="anomalyChannelChart" class="chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>异常商品</h4>
+                  <span>拖累或跃升明显的商品</span>
+                </div>
+                <div id="anomalyProductChart" class="chart"></div>
+              </article>
+            </div>
+
+            <div class="opportunity-grid">
+              <article class="insight-card priority-card">
+                <h4>当前最需要关注的 3 个问题</h4>
+                <ol id="priorityList" class="priority-list"></ol>
+              </article>
+              <article class="insight-card">
+                <h4>异常日期清单</h4>
+                <ul id="anomalyDateList" class="insight-list"></ul>
+              </article>
+            </div>
+          </section>
+
+          <section id="recommendation" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Management Actions</p>
+                <h3>经营建议</h3>
+              </div>
+              <p id="recommendationConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="opportunity-grid">
+              <article class="insight-card priority-card">
+                <h4>当前最重要的 3 个问题</h4>
+                <ol id="recommendationPriorityList" class="priority-list"></ol>
+              </article>
+              <article class="insight-card">
+                <h4>下一阶段建议</h4>
+                <ul id="actionList" class="insight-list"></ul>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>渠道健康象限</h4>
+                  <span>体量 × 增长</span>
+                </div>
+                <div id="channelHealthChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>商品投入优先级</h4>
+                  <span>贡献 × 增长</span>
+                </div>
+                <div id="productPriorityChart" class="chart tall-chart"></div>
+              </article>
+            </div>
+
+            <article class="table-card">
+              <div class="card-title">
+                <h4>数据质量检查结果</h4>
+                <span>字段识别、日期清洗、文件一致性</span>
+              </div>
+              <div id="qualityPanel" class="field-status"></div>
+            </article>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./echarts.min.js"></script>
+    <script src="./data-bundle.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
