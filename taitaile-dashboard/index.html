@@ -206,6 +206,57 @@
               </article>
             </div>
 
+            <section class="traffic-band" aria-label="流量与推广经营视角">
+              <div class="card-title compact-title">
+                <h4>流量与推广口径</h4>
+                <span>结合本地流量 Excel，和出货口径交叉判断趋势</span>
+              </div>
+              <div class="traffic-metric-grid">
+                <div class="traffic-metric">
+                  <span>流量 GMV</span>
+                  <strong id="trafficGmv">-</strong>
+                  <small id="trafficGmvSub">-</small>
+                </div>
+                <div class="traffic-metric">
+                  <span>访客数</span>
+                  <strong id="trafficVisitors">-</strong>
+                  <small id="trafficVisitorsSub">-</small>
+                </div>
+                <div class="traffic-metric">
+                  <span>转化率</span>
+                  <strong id="trafficCvr">-</strong>
+                  <small id="trafficCvrSub">-</small>
+                </div>
+                <div class="traffic-metric">
+                  <span>推广花费</span>
+                  <strong id="trafficSpend">-</strong>
+                  <small id="trafficSpendSub">-</small>
+                </div>
+                <div class="traffic-metric">
+                  <span>推广 ROI</span>
+                  <strong id="trafficRoi">-</strong>
+                  <small id="trafficRoiSub">-</small>
+                </div>
+              </div>
+              <div class="chart-grid two-col">
+                <article class="chart-card">
+                  <div class="card-title">
+                    <h4>出货 GMV vs 流量 GMV</h4>
+                    <span>趋势应同向，但口径允许存在差异</span>
+                  </div>
+                  <div id="trafficTrendChart" class="chart"></div>
+                </article>
+                <article class="chart-card">
+                  <div class="card-title">
+                    <h4>推广花费与 ROI</h4>
+                    <span>判断投放效率变化</span>
+                  </div>
+                  <div id="trafficPromotionChart" class="chart"></div>
+                </article>
+              </div>
+              <ul id="trafficInsights" class="insight-list traffic-insights"></ul>
+            </section>
+
             <div class="overview-story-grid">
               <article class="chart-card overview-rank-card">
                 <div class="card-title compact-title">
