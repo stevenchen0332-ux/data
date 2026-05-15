@@ -63,6 +63,8 @@
     filteredRecords: [],
     fileReports: [],
     dataBundle: null,
+    /** 无店铺列时，店铺下拉与筛选使用渠道值（常见于仅含 data-bundle 的发布包） */
+    storeFilterUsesChannel: false,
     compareManuallyChanged: false,
     chartInstances: {},
     fieldCoverage: {
@@ -707,7 +709,12 @@
     const categories = sortValuesByGmv(state.allRecords, "category");
     const brands = sortValuesByGmv(state.allRecords.filter((record) => record.brand), "brand");
     const regions = sortValuesByGmv(state.allRecords.filter((record) => record.region), "region");
-    const stores = sortValuesByGmv(state.allRecords.filter((record) => record.store), "store");
+    let stores = sortValuesByGmv(state.allRecords.filter((record) => record.store), "store");
+    state.storeFilterUsesChannel = false;
+    if (!stores.length && state.allRecords.length) {
+      stores = sortValuesByGmv(state.allRecords, "channel");
+      state.storeFilterUsesChannel = true;
+    }
     const dates = state.allRecords.map((record) => record.dateKey).sort();
 
     fillSelect(els.monthFilter, months, "全部月份", formatMonthLabel);
@@ -716,6 +723,13 @@
     fillSelect(els.brandFilter, brands, "全部品牌");
     fillMultiSelect(els.regionFilter, regions, "全部地区");
     fillMultiSelect(els.storeFilter, stores, "全部店铺");
+
+    const storeHint = document.getElementById("storeFilterHint");
+    if (storeHint) {
+      storeHint.textContent = state.storeFilterUsesChannel
+        ? "当前数据无独立店铺列，选项与「渠道」一致，可在此多选店铺（经销商）"
+        : "可多选；默认「全部」";
+    }
 
     els.brandFilterWrap.classList.toggle("hidden", !brands.length);
     els.regionFilterWrap.classList.toggle("hidden", !regions.length);
@@ -1155,7 +1169,10 @@
       if (options.includeCategory) {
         if (channelSet && !channelSet.has(record.channel)) return false;
         if (categorySet && !categorySet.has(record.category || "未识别类目")) return false;
-        if (storeSet && (!record.store || !storeSet.has(record.store))) return false;
+        if (storeSet) {
+          const storeKey = state.storeFilterUsesChannel ? record.channel : record.store || "";
+          if (!storeSet.has(storeKey)) return false;
+        }
         if (brand !== "all" && record.brand !== brand) return false;
         if (regionSet && !regionSet.has(record.region)) return false;
         if (productKeyword) {
@@ -3000,7 +3017,7 @@
       日期: record.dateKey,
       月份: record.monthKey,
       渠道: record.channel,
-      店铺: record.store || "",
+      店铺: state.storeFilterUsesChannel ? record.channel : record.store || "",
       产品大类: record.category,
       商品: record.product,
       商品编码: record.sku,
