@@ -145,7 +145,7 @@
                 </div>
                 <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
               </div>
-              <div class="filter-field filter-field-multi-dropdown optional-filter hidden" id="storeFilterWrap">
+              <div class="filter-field filter-field-multi-dropdown" id="storeFilterWrap">
                 <label for="storeFilterTrigger">店铺</label>
                 <div class="multi-dropdown-root">
                   <select id="storeFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
@@ -163,19 +163,7 @@
                   </button>
                   <div id="storeFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
                 </div>
-                <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
-              </div>
-              <div class="filter-field search-field filter-field-search-inline">
-                <label for="productSearch">商品搜索</label>
-                <input id="productSearch" type="search" placeholder="输入商品名或编码" disabled />
-              </div>
-            </div>
-            <div class="filter-dims-secondary-row">
-              <div class="filter-field optional-filter hidden" id="brandFilterWrap">
-                <label for="brandFilter">品牌</label>
-                <select id="brandFilter" disabled>
-                  <option value="all">全部品牌</option>
-                </select>
+                <small class="filter-multi-hint">可多选；无「店铺」列时仅「全部」</small>
               </div>
               <div class="filter-field filter-field-multi-dropdown optional-filter hidden" id="regionFilterWrap">
                 <label for="regionFilterTrigger">地区</label>
@@ -196,6 +184,19 @@
                   <div id="regionFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
                 </div>
                 <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
+              </div>
+              <div class="filter-field search-field filter-field-search-inline">
+                <label for="productSearch">商品搜索</label>
+                <input id="productSearch" type="search" placeholder="输入商品名或编码" disabled />
+                <small class="filter-multi-hint filter-multi-hint--blank" aria-hidden="true">&nbsp;</small>
+              </div>
+            </div>
+            <div class="filter-dims-secondary-row">
+              <div class="filter-field optional-filter hidden" id="brandFilterWrap">
+                <label for="brandFilter">品牌</label>
+                <select id="brandFilter" disabled>
+                  <option value="all">全部品牌</option>
+                </select>
               </div>
             </div>
           </div>

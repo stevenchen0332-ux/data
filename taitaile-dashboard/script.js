@@ -719,9 +719,8 @@
 
     els.brandFilterWrap.classList.toggle("hidden", !brands.length);
     els.regionFilterWrap.classList.toggle("hidden", !regions.length);
-    els.storeFilterWrap.classList.toggle("hidden", !stores.length);
     if (els.filterDimsPrimaryGrid) {
-      els.filterDimsPrimaryGrid.classList.toggle("has-store", stores.length > 0);
+      els.filterDimsPrimaryGrid.classList.toggle("has-region", regions.length > 0);
     }
 
     if (dates.length) {
@@ -756,7 +755,7 @@
 
     els.brandFilter.disabled = !enabled || els.brandFilterWrap.classList.contains("hidden");
     els.regionFilter.disabled = !enabled || els.regionFilterWrap.classList.contains("hidden");
-    els.storeFilter.disabled = !enabled || els.storeFilterWrap.classList.contains("hidden");
+    els.storeFilter.disabled = !enabled;
 
     [els.channelFilter, els.categoryFilter, els.storeFilter, els.regionFilter].forEach((select) => {
       syncMultiDropdownFromSelect(select);

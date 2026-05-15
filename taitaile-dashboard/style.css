@@ -384,12 +384,20 @@ input:disabled {
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 12px;
+  width: 100%;
+}
+
+.filter-bar-row-dates {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  width: 100%;
 }
 
 .filter-bar-row-dates .filter-field {
-  flex: 0 1 auto;
-  min-width: 112px;
-  max-width: 160px;
+  min-width: 0;
+  max-width: none;
 }
 
 .filter-bar-row-dims {
@@ -405,11 +413,11 @@ input:disabled {
   gap: 12px;
   width: 100%;
   align-items: end;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.filter-dims-primary-grid.has-store {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.filter-dims-primary-grid.has-region {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .filter-dims-primary-grid > .filter-field {
@@ -425,18 +433,13 @@ input:disabled {
   flex-wrap: wrap;
   gap: 12px;
   align-items: flex-end;
+  width: 100%;
 }
 
 .filter-dims-secondary-row > .filter-field {
-  flex: 0 1 200px;
-  min-width: 160px;
-  max-width: 280px;
-}
-
-.filter-dims-secondary-row > .filter-field-multi-dropdown {
-  flex: 0 1 200px;
-  min-width: 160px;
-  max-width: 280px;
+  flex: 0 1 min(320px, 100%);
+  min-width: min(200px, 100%);
+  max-width: 360px;
 }
 
 .filter-field {
@@ -574,9 +577,16 @@ input:disabled {
 }
 
 .filter-multi-hint {
+  display: block;
   color: var(--muted);
   font-size: 11px;
-  line-height: 1.3;
+  line-height: 1.35;
+  min-height: 2.8em;
+}
+
+.filter-multi-hint--blank {
+  color: transparent;
+  user-select: none;
 }
 
 .search-field {
@@ -1027,16 +1037,15 @@ td {
     grid-template-columns: 218px minmax(0, 1fr);
   }
 
-  .filter-bar-row-dates .filter-field {
-    min-width: 100px;
-    max-width: none;
+  .filter-bar-row-dates {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .filter-dims-primary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .filter-dims-primary-grid.has-store {
+  .filter-dims-primary-grid.has-region {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1100,8 +1109,12 @@ td {
     min-width: 0;
   }
 
+  .filter-bar-row-dates {
+    grid-template-columns: 1fr;
+  }
+
   .filter-dims-primary-grid,
-  .filter-dims-primary-grid.has-store {
+  .filter-dims-primary-grid.has-region {
     grid-template-columns: 1fr;
   }
 
