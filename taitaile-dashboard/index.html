@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>太太乐全渠道经营驾驶舱</title>
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./style.css?v=20260515i" />
+    <link rel="stylesheet" href="./ttl-traffic.css?v=20260515i" />
   </head>
   <body>
     <div class="app-shell">
@@ -34,9 +35,12 @@
             <span class="nav-icon">04</span>
             <span>异常监控</span>
           </button>
-          <!-- RESERVED (slot 05): 流量与转化 — 侧栏/顶栏/story-nav 与 #traffic 面板待接入；接入后将本项「经营建议」顺延为 06。 -->
-          <button class="nav-item" data-module="recommendation" type="button">
+          <button class="nav-item" data-module="traffic" type="button">
             <span class="nav-icon">05</span>
+            <span>流量与转化</span>
+          </button>
+          <button class="nav-item" data-module="recommendation" type="button">
+            <span class="nav-icon">06</span>
             <span>经营建议</span>
           </button>
         </nav>
@@ -80,55 +84,126 @@
         </section>
 
         <section class="filter-bar" aria-label="全局筛选">
-          <div class="filter-field">
-            <label for="monthFilter">月份</label>
-            <select id="monthFilter" disabled>
-              <option value="all">全部月份</option>
-            </select>
+          <div class="filter-bar-row filter-bar-row-dates">
+            <div class="filter-field">
+              <label for="monthFilter">月份</label>
+              <select id="monthFilter" disabled>
+                <option value="all">全部月份</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="startDateFilter">开始日期</label>
+              <input id="startDateFilter" type="date" disabled />
+            </div>
+            <div class="filter-field">
+              <label for="endDateFilter">结束日期</label>
+              <input id="endDateFilter" type="date" disabled />
+            </div>
+            <div class="filter-field">
+              <label for="compareStartDateFilter">对比开始</label>
+              <input id="compareStartDateFilter" type="date" disabled />
+            </div>
+            <div class="filter-field">
+              <label for="compareEndDateFilter">对比结束</label>
+              <input id="compareEndDateFilter" type="date" disabled />
+            </div>
           </div>
-          <div class="filter-field">
-            <label for="startDateFilter">开始日期</label>
-            <input id="startDateFilter" type="date" disabled />
-          </div>
-          <div class="filter-field">
-            <label for="endDateFilter">结束日期</label>
-            <input id="endDateFilter" type="date" disabled />
-          </div>
-          <div class="filter-field">
-            <label for="compareStartDateFilter">对比开始</label>
-            <input id="compareStartDateFilter" type="date" disabled />
-          </div>
-          <div class="filter-field">
-            <label for="compareEndDateFilter">对比结束</label>
-            <input id="compareEndDateFilter" type="date" disabled />
-          </div>
-          <div class="filter-field">
-            <label for="channelFilter">渠道</label>
-            <select id="channelFilter" disabled>
-              <option value="all">全部渠道</option>
-            </select>
-          </div>
-          <div class="filter-field">
-            <label for="categoryFilter">产品大类</label>
-            <select id="categoryFilter" disabled>
-              <option value="all">全部大类</option>
-            </select>
-          </div>
-          <div class="filter-field optional-filter hidden" id="brandFilterWrap">
-            <label for="brandFilter">品牌</label>
-            <select id="brandFilter" disabled>
-              <option value="all">全部品牌</option>
-            </select>
-          </div>
-          <div class="filter-field optional-filter hidden" id="regionFilterWrap">
-            <label for="regionFilter">地区</label>
-            <select id="regionFilter" disabled>
-              <option value="all">全部地区</option>
-            </select>
-          </div>
-          <div class="filter-field search-field">
-            <label for="productSearch">商品搜索</label>
-            <input id="productSearch" type="search" placeholder="输入商品名或编码" disabled />
+          <div class="filter-bar-row filter-bar-row-dims">
+            <div class="filter-dims-primary-grid" id="filterDimsPrimaryGrid">
+              <div class="filter-field filter-field-multi-dropdown">
+                <label for="channelFilterTrigger">渠道</label>
+                <div class="multi-dropdown-root">
+                  <select id="channelFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                  <button
+                    type="button"
+                    id="channelFilterTrigger"
+                    class="multi-dropdown-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-controls="channelFilterPanel"
+                    disabled
+                  >
+                    <span class="multi-dropdown-trigger-text">全部渠道</span>
+                    <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                  </button>
+                  <div id="channelFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+                </div>
+                <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
+              </div>
+              <div class="filter-field filter-field-multi-dropdown">
+                <label for="categoryFilterTrigger">产品大类</label>
+                <div class="multi-dropdown-root">
+                  <select id="categoryFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                  <button
+                    type="button"
+                    id="categoryFilterTrigger"
+                    class="multi-dropdown-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-controls="categoryFilterPanel"
+                    disabled
+                  >
+                    <span class="multi-dropdown-trigger-text">全部大类</span>
+                    <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                  </button>
+                  <div id="categoryFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+                </div>
+                <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
+              </div>
+              <div class="filter-field filter-field-multi-dropdown" id="storeFilterWrap">
+                <label for="storeFilterTrigger">店铺</label>
+                <div class="multi-dropdown-root">
+                  <select id="storeFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                  <button
+                    type="button"
+                    id="storeFilterTrigger"
+                    class="multi-dropdown-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-controls="storeFilterPanel"
+                    disabled
+                  >
+                    <span class="multi-dropdown-trigger-text">全部店铺</span>
+                    <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                  </button>
+                  <div id="storeFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+                </div>
+                <small class="filter-multi-hint" id="storeFilterHint">可多选；默认「全部」</small>
+              </div>
+              <div class="filter-field filter-field-multi-dropdown optional-filter hidden" id="regionFilterWrap">
+                <label for="regionFilterTrigger">地区</label>
+                <div class="multi-dropdown-root">
+                  <select id="regionFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                  <button
+                    type="button"
+                    id="regionFilterTrigger"
+                    class="multi-dropdown-trigger"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-controls="regionFilterPanel"
+                    disabled
+                  >
+                    <span class="multi-dropdown-trigger-text">全部地区</span>
+                    <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                  </button>
+                  <div id="regionFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+                </div>
+                <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
+              </div>
+              <div class="filter-field search-field filter-field-search-inline">
+                <label for="productSearch">商品搜索</label>
+                <input id="productSearch" type="search" placeholder="输入商品名或编码" disabled />
+                <small class="filter-multi-hint filter-multi-hint--blank" aria-hidden="true">&nbsp;</small>
+              </div>
+            </div>
+            <div class="filter-dims-secondary-row">
+              <div class="filter-field optional-filter hidden" id="brandFilterWrap">
+                <label for="brandFilter">品牌</label>
+                <select id="brandFilter" disabled>
+                  <option value="all">全部品牌</option>
+                </select>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -162,7 +237,7 @@
             <button class="nav-item story-tab" data-module="channel" type="button">渠道归因</button>
             <button class="nav-item story-tab" data-module="product" type="button">商品经营</button>
             <button class="nav-item story-tab" data-module="anomaly" type="button">异常监控</button>
-            <!-- RESERVED (slot 05): 流量与转化 story-tab 待接入 -->
+            <button class="nav-item story-tab" data-module="traffic" type="button">流量与转化</button>
             <button class="nav-item story-tab" data-module="recommendation" type="button">经营建议</button>
           </nav>
 
@@ -287,6 +362,106 @@
               <h4>自动经营结论</h4>
               <ul id="overviewInsights" class="insight-list"></ul>
             </article>
+
+            <div id="ttlTrafficAnalysisPanel" class="ttl-traffic ttl-traffic--root" aria-label="流量转化经营分析">
+              <div class="ttl-traffic__head">
+                <div>
+                  <h3 class="ttl-traffic__title">流量转化经营分析</h3>
+                  <p class="ttl-traffic__sub">
+                    与上方「经营总览」出货看板同筛选上下文；GMV 分解 GMV ≈ UV × CVR × AOV（口径随数据完整度变化）。
+                  </p>
+                </div>
+                <span id="ttlTrafficDataBadge" class="ttl-traffic__badge ttl-traffic__badge--stub">数据加载中</span>
+              </div>
+
+              <div class="ttl-traffic__kpi-grid" aria-label="流量转化 KPI">
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">GMV</span>
+                  <strong id="ttlTrafficKpiGmv" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiGmvSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">Net GMV</span>
+                  <strong id="ttlTrafficKpiNetGmv" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiNetGmvSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">UV</span>
+                  <strong id="ttlTrafficKpiUv" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiUvSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">CVR</span>
+                  <strong id="ttlTrafficKpiCvr" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiCvrSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">AOV</span>
+                  <strong id="ttlTrafficKpiAov" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiAovSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">推广费用</span>
+                  <strong id="ttlTrafficKpiPromo" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiPromoSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">ROI</span>
+                  <strong id="ttlTrafficKpiRoi" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiRoiSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">退款率</span>
+                  <strong id="ttlTrafficKpiRefund" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiRefundSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+              </div>
+
+              <div class="ttl-traffic__grid-2">
+                <div class="ttl-traffic__chart-card">
+                  <div class="ttl-traffic__chart-title">
+                    <h4>GMV 拆解趋势</h4>
+                    <span>UV / CVR(%) / AOV / GMV（近 45 日）</span>
+                  </div>
+                  <div id="ttlTrafficBridgeChart" class="ttl-traffic__chart ttl-traffic__chart--tall"></div>
+                </div>
+                <div class="ttl-traffic__chart-card">
+                  <div class="ttl-traffic__chart-title">
+                    <h4>出货 × GMV 日趋势</h4>
+                    <span>左轴出货数量 · 右轴 GMV（随渠道/店铺筛选联动）</span>
+                  </div>
+                  <div id="ttlTrafficDualAxisChart" class="ttl-traffic__chart ttl-traffic__chart--tall"></div>
+                </div>
+              </div>
+
+              <div class="ttl-traffic__eff-grid" aria-label="投放效率">
+                <div class="ttl-traffic__eff-card">
+                  <div class="ttl-traffic__eff-label">推广费用</div>
+                  <div id="ttlEffPromo" class="ttl-traffic__eff-value">-</div>
+                  <div class="ttl-traffic__eff-note">当前筛选周期合计</div>
+                </div>
+                <div class="ttl-traffic__eff-card">
+                  <div class="ttl-traffic__eff-label">ROI</div>
+                  <div id="ttlEffRoi" class="ttl-traffic__eff-value">-</div>
+                  <div class="ttl-traffic__eff-note">GMV / 推广费用</div>
+                </div>
+                <div class="ttl-traffic__eff-card">
+                  <div class="ttl-traffic__eff-label">费比</div>
+                  <div id="ttlEffFeeRatio" class="ttl-traffic__eff-value">-</div>
+                  <div class="ttl-traffic__eff-note">推广费用 / GMV</div>
+                </div>
+                <div class="ttl-traffic__eff-card">
+                  <div class="ttl-traffic__eff-label">推广 GMV 占比</div>
+                  <div id="ttlEffPromoGmv" class="ttl-traffic__eff-value">-</div>
+                  <div id="ttlEffPromoGmvNote" class="ttl-traffic__eff-note">-</div>
+                </div>
+              </div>
+
+              <div class="ttl-traffic__diag">
+                <h4>自动经营诊断</h4>
+                <ul id="ttlTrafficDiagList"></ul>
+              </div>
+            </div>
           </section>
 
           <section id="channel" class="module-section">
@@ -529,7 +704,56 @@
             </div>
           </section>
 
-          <!-- RESERVED: <section id="traffic" class="module-section">…</section> 将插在本块与「经营建议」之间 -->
+          <section id="traffic" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Traffic</p>
+                <h3>流量与转化</h3>
+              </div>
+              <p id="trafficConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="kpi-grid">
+              <article class="kpi-card">
+                <span class="kpi-label">累计访客（UV）</span>
+                <strong id="trafficKpiVisitors">-</strong>
+                <span id="trafficKpiVisitorsSub" class="kpi-sub">-</span>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">累计曝光</span>
+                <strong id="trafficKpiImpressions">-</strong>
+                <span class="kpi-sub">当前筛选范围内求和</span>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">累计点击</span>
+                <strong id="trafficKpiClicks">-</strong>
+                <span class="kpi-sub">当前筛选范围内求和</span>
+              </article>
+              <article class="kpi-card">
+                <span class="kpi-label">转化率 / 点击密度</span>
+                <strong id="trafficKpiConv">-</strong>
+                <span id="trafficKpiConvSub" class="kpi-sub">-</span>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>每日访客与点击</h4>
+                  <span>与出货日历对齐的日粒度汇总</span>
+                </div>
+                <div id="trafficDailyChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>渠道访客 TOP</h4>
+                  <span>按访客数排序（有数据时）</span>
+                </div>
+                <div id="trafficChannelChart" class="chart tall-chart"></div>
+              </article>
+            </div>
+          </section>
+
           <section id="recommendation" class="module-section">
             <div class="section-head">
               <div>
@@ -585,7 +809,8 @@
       crossorigin="anonymous"
       onerror="this.onerror=null;this.src='./papaparse.min.js'"
     ></script>
-    <script src="./data-bundle.js"></script>
-    <script src="./script.js"></script>
+    <script src="./data-bundle.js?v=20260515f"></script>
+    <script src="./script.js?v=20260515i"></script>
+    <script src="./ttl-traffic-panel.js?v=20260515i"></script>
   </body>
 </html>

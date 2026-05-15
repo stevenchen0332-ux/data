@@ -3,7 +3,8 @@
 
   const FIELD_ALIASES = {
     date: ["订单日期", "发货时间", "出货日期", "日期", "日", "date", "orderdate", "shipdate"],
-    channel: ["经销商", "渠道", "店铺", "店铺名称", "门店", "客户"],
+    store: ["店铺", "店铺名称", "网店", "店铺名", "门店名称", "shop", "store name", "店铺编码"],
+    channel: ["经销商", "渠道", "门店", "客户"],
     product: ["商品名称", "品名", "货品名称", "SKU名称", "sku名称", "产品名称"],
     sku: ["商品编码", "货品编号", "SKU编号", "sku编号", "编码", "货号"],
     quantity: ["数量", "出货数量", "销售数量", "货品数量", "销量", "件数"],
@@ -11,12 +12,14 @@
     region: ["省", "省份", "州省", "市", "城市", "区县", "地区", "区域"],
     brand: ["品牌", "品牌名称", "brand"],
     orderId: ["订单号", "订单编号", "发货单号", "发货单编号", "交易单号", "单据编号", "单号", "订单ID"],
+    category: ["产品大类", "类目", "品类", "商品类目"],
   };
 
   const REQUIRED_FIELDS = ["date", "channel", "product", "quantity", "amount"];
   const FIELD_LABELS = {
     date: "日期",
     channel: "渠道",
+    store: "店铺",
     product: "商品",
     sku: "商品编码",
     quantity: "数量",
@@ -24,6 +27,7 @@
     region: "地区",
     brand: "品牌",
     orderId: "订单 / 发货单",
+    category: "产品大类",
     visitors: "访客",
     conversionRate: "转化率",
     promotionSpend: "推广花费",
@@ -51,6 +55,9 @@
     palette: ["#7fc0b8", "#f2d36b", "#91b8d8", "#f7a6b5", "#95c48b", "#f3aa67", "#9a86b8", "#d56e6e", "#7a9cc6"],
   };
 
+  /** 多选下拉中「全部」选项的 value，勿与真实渠道/类目重名 */
+  const MULTI_ALL_VALUE = "__all__";
+
   const state = {
     allRecords: [],
     filteredRecords: [],
@@ -61,6 +68,7 @@
     fieldCoverage: {
       brand: false,
       region: false,
+      store: false,
       orderId: false,
     },
   };
@@ -107,10 +115,21 @@
       "compareEndDateFilter",
       "channelFilter",
       "categoryFilter",
+      "storeFilter",
+      "storeFilterWrap",
+      "filterDimsPrimaryGrid",
       "brandFilter",
       "brandFilterWrap",
       "regionFilter",
       "regionFilterWrap",
+      "channelFilterTrigger",
+      "channelFilterPanel",
+      "categoryFilterTrigger",
+      "categoryFilterPanel",
+      "storeFilterTrigger",
+      "storeFilterPanel",
+      "regionFilterTrigger",
+      "regionFilterPanel",
       "productSearch",
       "resetFiltersBtn",
       "exportBtn",
@@ -159,6 +178,13 @@
       "anomalyConclusion",
       "priorityList",
       "anomalyDateList",
+      "trafficConclusion",
+      "trafficKpiVisitors",
+      "trafficKpiVisitorsSub",
+      "trafficKpiImpressions",
+      "trafficKpiClicks",
+      "trafficKpiConv",
+      "trafficKpiConvSub",
       "recommendationConclusion",
       "recommendationPriorityList",
       "actionList",
@@ -174,6 +200,8 @@
   }
 
   function bindEvents() {
+    initMultiDropdowns();
+
     els.csvInput.addEventListener("change", (event) => {
       handleFiles(Array.from(event.target.files || []));
     });
@@ -209,6 +237,7 @@
       els.endDateFilter,
       els.channelFilter,
       els.categoryFilter,
+      els.storeFilter,
       els.brandFilter,
       els.regionFilter,
       els.productSearch,
@@ -216,6 +245,15 @@
 
     filterControls.forEach((control) => {
       control.addEventListener(control.type === "search" ? "input" : "change", () => {
+        if (
+          control === els.channelFilter ||
+          control === els.categoryFilter ||
+          control === els.storeFilter ||
+          control === els.regionFilter
+        ) {
+          syncMultiSelectExclusiveAll(control);
+          refreshMultiDropdownCheckboxes(control);
+        }
         if (control === els.monthFilter) handleMonthFilterChange();
         if (control === els.startDateFilter || control === els.endDateFilter) {
           syncCompareDates();
@@ -314,14 +352,30 @@
     const bundle = window.TTL_DASHBOARD_DATA;
     const dims = bundle.dims || {};
     const products = dims.products || [];
+    const stores = dims.stores;
+    const hasStoreDim = Array.isArray(stores) && stores.length > 0;
     const metricKeys = bundle.metrics || bundle.meta?.operationFields || [];
     const records = (bundle.rows || []).map((row, index) => {
-      const product = products[row[2]] || {};
+      const pi = hasStoreDim ? 3 : 2;
+      const ci = hasStoreDim ? 4 : 3;
+      const ri = hasStoreDim ? 5 : 4;
+      const amountI = hasStoreDim ? 6 : 5;
+      const qtyI = hasStoreDim ? 7 : 6;
+      const ordersI = hasStoreDim ? 8 : 7;
+      const metricBase = hasStoreDim ? 9 : 8;
+      const product = products[row[pi]] || {};
       const dateKey = dims.dates[row[0]];
       const metrics = {};
       metricKeys.forEach((key, metricIndex) => {
-        metrics[key] = Number(row[8 + metricIndex]) || 0;
+        metrics[key] = Number(row[metricBase + metricIndex]) || 0;
       });
+      let storeVal = "";
+      if (hasStoreDim && row.length > 2) {
+        const si = Number(row[2]);
+        if (Number.isFinite(si) && si >= 0 && stores[si] != null && String(stores[si]).trim() !== "") {
+          storeVal = String(stores[si]).trim();
+        }
+      }
       return {
         date: parseDateValue(dateKey),
         dateKey,
@@ -330,18 +384,20 @@
         product: product.product || "未识别商品",
         sku: product.sku || "",
         productKey: `${product.product || "未识别商品"}__${product.sku || "NO_SKU"}`,
-        category: dims.categories[row[3]] || "未识别类目",
-        quantity: Number(row[6]) || 0,
-        amount: Number(row[5]) || 0,
+        category: dims.categories[row[ci]] || "未识别类目",
+        store: storeVal,
+        quantity: Number(row[qtyI]) || 0,
+        amount: Number(row[amountI]) || 0,
         brand: "",
-        region: dims.regions[row[4]] || "未识别地区",
+        region: dims.regions[row[ri]] || "未识别地区",
         orderId: "",
-        orderCount: Number(row[7]) || 0,
+        orderCount: Number(row[ordersI]) || 0,
         visitors: metrics.visitors || 0,
         conversionRate: metrics.conversionRate || 0,
         promotionSpend: metrics.promotionSpend || 0,
         impressions: metrics.impressions || 0,
         clicks: metrics.clicks || 0,
+        pageViews: metrics.pageViews || metrics.pv || 0,
         fileName: "data-bundle.js",
         rowNumber: index + 1,
         raw: row,
@@ -368,9 +424,15 @@
     };
 
     applyReports([report]);
-    showToastLikeStatus(
-      `已加载本地数据包：${formatInteger(bundle.meta.rawRows)} 行原始数据，${formatInteger(bundle.meta.factRows)} 条经营事实`,
-    );
+    const baseMsg = `已加载本地数据包：${formatInteger(bundle.meta.rawRows)} 行原始数据，${formatInteger(bundle.meta.factRows)} 条经营事实`;
+    if (!hasStoreDim) {
+      showToastLikeStatus(
+        `${baseMsg}。提示：当前包无店铺维度（缺少 dims.stores），店铺筛选仅「全部」。请在本机运行 build_data.py 用含「店铺」列的源表重新生成 data-bundle.js，替换站点同目录文件后强刷（可改 index 里 data-bundle.js 的 ?v=）。`,
+        true,
+      );
+    } else {
+      showToastLikeStatus(baseMsg);
+    }
   }
 
   function applyReports(reports) {
@@ -382,6 +444,7 @@
     state.fieldCoverage = {
       brand: state.allRecords.some((record) => record.brand),
       region: state.allRecords.some((record) => record.region),
+      store: state.allRecords.some((record) => record.store),
       orderId: state.allRecords.some((record) => record.orderId),
     };
 
@@ -501,6 +564,7 @@
     const rows = Array.isArray(result.data) ? result.data : [];
     const headers = (result.meta.fields || []).filter(Boolean);
     const fields = detectFields(headers);
+    ensureChannelColumnWhenMissing(fields);
     const missing = REQUIRED_FIELDS.filter((field) => !fields[field]);
     const parsedRows = [];
     let invalidRows = 0;
@@ -522,6 +586,12 @@
     };
   }
 
+  function ensureChannelColumnWhenMissing(fields) {
+    if (!fields.channel && fields.store) {
+      fields.channel = fields.store;
+    }
+  }
+
   function parseCsvFile(file) {
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
@@ -533,6 +603,7 @@
           const rows = Array.isArray(result.data) ? result.data : [];
           const headers = (result.meta.fields || []).filter(Boolean);
           const fields = detectFields(headers);
+          ensureChannelColumnWhenMissing(fields);
           const missing = REQUIRED_FIELDS.filter((field) => !fields[field]);
           const parsedRows = [];
           let invalidRows = 0;
@@ -593,6 +664,7 @@
     if (group === "quantity") return !/(日期|时间|date|time)/i.test(normalizedHeader);
     if (group === "amount") return !/(数量|件数|qty|quantity)/i.test(normalizedHeader);
     if (group === "sku") return !/(名称|name)/i.test(normalizedHeader);
+    if (group === "store") return !/(访客|uv|流量)/i.test(normalizedHeader);
     return true;
   }
 
@@ -600,7 +672,7 @@
     const text = normalizedHeader;
     const matchers = {
       date: () => /(日期|时间|date|time|day)/i.test(text),
-      channel: () => /(经销商|渠道|店铺|门店|客户|分销|channel|dealer|store)/i.test(text),
+      channel: () => /(经销商|渠道|门店|客户|分销|channel|dealer)/i.test(text),
       product: () => /(商品|品名|货品|产品|sku名称|productname|itemname)/i.test(text) && !/(编码|编号|code|id)/i.test(text),
       sku: () => /(商品编码|货品编号|sku编号|sku|编码|编号|code)/i.test(text) && !/(名称|name)/i.test(text),
       quantity: () => /(数量|销量|件数|出货量|qty|quantity|volume)/i.test(text) && !/(日期|时间|date|time)/i.test(text),
@@ -608,6 +680,11 @@
       region: () => /(省|市|区县|地区|区域|城市|province|city|region)/i.test(text),
       brand: () => /(品牌|brand)/i.test(text),
       orderId: () => /(订单|发货单|交易单|单据|单号|order|bill|no|id)/i.test(text),
+      category: () =>
+        /(产品大类|类目|品类|商品类目|category)/i.test(text) && !/(商品名称|品名|货品名称|编码)/i.test(text),
+      store: () =>
+        /(店铺|网店|shop|store)/i.test(text) &&
+        !/(商品|品名|货品|产品|渠道|经销商|金额|数量|编码|日期)/i.test(text),
     };
     return matchers[group] ? matchers[group]() : false;
   }
@@ -620,10 +697,12 @@
     const product = cleanText(getCell(row, fields.product)) || "未识别商品";
     const sku = cleanText(getCell(row, fields.sku));
     const channel = cleanText(getCell(row, fields.channel)) || "未识别渠道";
+    const store = cleanText(getCell(row, fields.store));
     const quantity = fields.quantity ? parseNumberValue(getCell(row, fields.quantity)) : 0;
     const amount = fields.amount ? parseNumberValue(getCell(row, fields.amount)) : 0;
     const brand = cleanText(getCell(row, fields.brand));
     const region = cleanText(getCell(row, fields.region));
+    const category = cleanText(getCell(row, fields.category)) || "未识别类目";
     const orderId = cleanText(getCell(row, fields.orderId));
     const dateKey = toDateKey(date);
 
@@ -632,6 +711,7 @@
       dateKey,
       monthKey: dateKey.slice(0, 7),
       channel,
+      store,
       product,
       sku,
       productKey: `${product}__${sku || "NO_SKU"}`,
@@ -639,6 +719,7 @@
       amount,
       brand,
       region,
+      category,
       orderId,
       fileName,
       rowNumber,
@@ -657,16 +738,28 @@
     const categories = sortValuesByGmv(state.allRecords, "category");
     const brands = sortValuesByGmv(state.allRecords.filter((record) => record.brand), "brand");
     const regions = sortValuesByGmv(state.allRecords.filter((record) => record.region), "region");
+    const stores = sortValuesByGmv(state.allRecords.filter((r) => r.store), "store");
     const dates = state.allRecords.map((record) => record.dateKey).sort();
 
     fillSelect(els.monthFilter, months, "全部月份", formatMonthLabel);
-    fillSelect(els.channelFilter, channels, "全部渠道");
-    fillSelect(els.categoryFilter, categories, "全部大类");
+    fillMultiSelect(els.channelFilter, channels, "全部渠道");
+    fillMultiSelect(els.categoryFilter, categories, "全部大类");
     fillSelect(els.brandFilter, brands, "全部品牌");
-    fillSelect(els.regionFilter, regions, "全部地区");
+    fillMultiSelect(els.regionFilter, regions, "全部地区");
+    fillMultiSelect(els.storeFilter, stores, "全部店铺");
+
+    const storeHint = document.getElementById("storeFilterHint");
+    if (storeHint) {
+      storeHint.textContent = stores.length
+        ? "可多选；默认「全部」"
+        : "当前数据无店铺维度：请在数据源中提供「店铺」列，或重新运行 build_data.py 生成含店铺字段的数据包。";
+    }
 
     els.brandFilterWrap.classList.toggle("hidden", !brands.length);
     els.regionFilterWrap.classList.toggle("hidden", !regions.length);
+    if (els.filterDimsPrimaryGrid) {
+      els.filterDimsPrimaryGrid.classList.toggle("has-region", regions.length > 0);
+    }
 
     if (dates.length) {
       els.startDateFilter.min = dates[0];
@@ -691,6 +784,7 @@
       els.compareEndDateFilter,
       els.channelFilter,
       els.categoryFilter,
+      els.storeFilter,
       els.productSearch,
       els.exportBtn,
     ].forEach((control) => {
@@ -699,6 +793,152 @@
 
     els.brandFilter.disabled = !enabled || els.brandFilterWrap.classList.contains("hidden");
     els.regionFilter.disabled = !enabled || els.regionFilterWrap.classList.contains("hidden");
+    els.storeFilter.disabled = !enabled;
+
+    [els.channelFilter, els.categoryFilter, els.storeFilter, els.regionFilter].forEach((select) => {
+      syncMultiDropdownFromSelect(select);
+    });
+  }
+
+  function getMultiDropdownParts(select) {
+    const root = select?.closest?.(".multi-dropdown-root");
+    if (!root) return null;
+    const trigger = root.querySelector(".multi-dropdown-trigger");
+    const panel = root.querySelector(".multi-dropdown-panel");
+    if (!trigger || !panel) return null;
+    return { root, trigger, panel };
+  }
+
+  function closeAllMultiDropdowns() {
+    document.querySelectorAll(".multi-dropdown-root.is-open").forEach((root) => root.classList.remove("is-open"));
+    document.querySelectorAll(".multi-dropdown-panel:not([hidden])").forEach((panel) => {
+      panel.hidden = true;
+    });
+    document.querySelectorAll(".multi-dropdown-trigger[aria-expanded='true']").forEach((btn) => {
+      btn.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function openMultiDropdown(trigger, panel) {
+    panel.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    const root = trigger.closest(".multi-dropdown-root");
+    if (root) root.classList.add("is-open");
+  }
+
+  function updateMultiDropdownTriggerText(select, trigger) {
+    const span = trigger.querySelector(".multi-dropdown-trigger-text");
+    if (!span) return;
+    const selected = Array.from(select.selectedOptions);
+    if (!selected.length) {
+      const allOpt = Array.from(select.options).find((o) => o.value === MULTI_ALL_VALUE);
+      span.textContent = allOpt ? allOpt.textContent : "—";
+      return;
+    }
+    if (selected.length === 1 && selected[0].value === MULTI_ALL_VALUE) {
+      span.textContent = selected[0].textContent;
+      return;
+    }
+    const specifics = selected.filter((o) => o.value !== MULTI_ALL_VALUE);
+    if (specifics.length === 1) {
+      span.textContent = specifics[0].textContent;
+      return;
+    }
+    span.textContent = `已选 ${specifics.length} 项`;
+  }
+
+  function syncCheckboxesFromSelect(select, panel) {
+    panel.querySelectorAll('input[type="checkbox"][data-md-value]').forEach((cb) => {
+      const val = cb.dataset.mdValue;
+      const opt = Array.from(select.options).find((o) => o.value === val);
+      if (opt) cb.checked = opt.selected;
+    });
+  }
+
+  function refreshMultiDropdownCheckboxes(select) {
+    const parts = getMultiDropdownParts(select);
+    if (!parts) return;
+    syncCheckboxesFromSelect(select, parts.panel);
+    updateMultiDropdownTriggerText(select, parts.trigger);
+  }
+
+  function rebuildMultiDropdownPanel(select, panel, trigger) {
+    panel.innerHTML = "";
+    Array.from(select.options).forEach((opt, index) => {
+      const row = document.createElement("div");
+      row.className = "multi-dropdown-option";
+      row.setAttribute("role", "option");
+      const safeId = `${select.id}-md-${index}`;
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = safeId;
+      cb.checked = opt.selected;
+      cb.dataset.mdValue = opt.value;
+      const lab = document.createElement("label");
+      lab.htmlFor = safeId;
+      lab.textContent = opt.textContent;
+      row.appendChild(cb);
+      row.appendChild(lab);
+      panel.appendChild(row);
+
+      cb.addEventListener("change", () => {
+        const targetOpt = Array.from(select.options).find((o) => o.value === opt.value);
+        if (!targetOpt) return;
+        targetOpt.selected = cb.checked;
+        syncMultiSelectExclusiveAll(select);
+        syncCheckboxesFromSelect(select, panel);
+        updateMultiDropdownTriggerText(select, trigger);
+        renderDashboard();
+      });
+    });
+  }
+
+  function syncMultiDropdownFromSelect(select) {
+    const parts = getMultiDropdownParts(select);
+    if (!parts) return;
+    const { trigger, panel } = parts;
+    trigger.disabled = select.disabled;
+    updateMultiDropdownTriggerText(select, trigger);
+    rebuildMultiDropdownPanel(select, panel, trigger);
+  }
+
+  function initMultiDropdowns() {
+    const rows = [
+      { select: els.channelFilter, trigger: els.channelFilterTrigger, panel: els.channelFilterPanel },
+      { select: els.categoryFilter, trigger: els.categoryFilterTrigger, panel: els.categoryFilterPanel },
+      { select: els.storeFilter, trigger: els.storeFilterTrigger, panel: els.storeFilterPanel },
+      { select: els.regionFilter, trigger: els.regionFilterTrigger, panel: els.regionFilterPanel },
+    ].filter((row) => row.select && row.trigger && row.panel);
+
+    rows.forEach(({ select, trigger, panel }) => {
+      panel.addEventListener("mousedown", (event) => {
+        event.stopPropagation();
+      });
+      trigger.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (select.disabled) return;
+        const willOpen = panel.hidden;
+        closeAllMultiDropdowns();
+        if (willOpen) {
+          syncMultiDropdownFromSelect(select);
+          openMultiDropdown(trigger, panel);
+        }
+      });
+    });
+
+    document.addEventListener(
+      "mousedown",
+      (event) => {
+        if (!(event.target instanceof Element)) return;
+        if (event.target.closest(".multi-dropdown-root")) return;
+        closeAllMultiDropdowns();
+      },
+      true,
+    );
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeAllMultiDropdowns();
+    });
   }
 
   function fillSelect(select, values, allLabel, labelFormatter = (value) => value) {
@@ -711,6 +951,84 @@
       select.appendChild(option);
     });
     select.value = values.includes(current) ? current : "all";
+  }
+
+  function syncMultiSelectExclusiveAll(select) {
+    if (!select || !select.multiple) return;
+    const opts = Array.from(select.options);
+    const selected = opts.filter((o) => o.selected);
+    if (!selected.length) {
+      const allOpt = opts.find((o) => o.value === MULTI_ALL_VALUE);
+      if (allOpt) allOpt.selected = true;
+      return;
+    }
+    if (selected.length > 1 && selected.some((o) => o.value === MULTI_ALL_VALUE)) {
+      opts.forEach((o) => {
+        if (o.value === MULTI_ALL_VALUE) o.selected = false;
+      });
+    }
+  }
+
+  function resetMultiSelectToAll(select) {
+    if (!select || !select.multiple) return;
+    Array.from(select.options).forEach((o) => {
+      o.selected = o.value === MULTI_ALL_VALUE;
+    });
+    syncMultiDropdownFromSelect(select);
+  }
+
+  function fillMultiSelect(select, values, allLabel, labelFormatter = (value) => value) {
+    const prev = new Set(
+      Array.from(select.selectedOptions)
+        .map((o) => o.value)
+        .filter(Boolean),
+    );
+    const valueSet = new Set(values);
+    select.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = MULTI_ALL_VALUE;
+    allOpt.textContent = allLabel;
+    select.appendChild(allOpt);
+    values.forEach((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = labelFormatter(value);
+      select.appendChild(option);
+    });
+
+    const restored = [...prev].filter((v) => v === MULTI_ALL_VALUE || valueSet.has(v));
+    if (!restored.length || restored.includes(MULTI_ALL_VALUE)) {
+      allOpt.selected = true;
+      syncMultiDropdownFromSelect(select);
+      return;
+    }
+    Array.from(select.options).forEach((o) => {
+      o.selected = restored.includes(o.value);
+    });
+    syncMultiDropdownFromSelect(select);
+  }
+
+  function readMultiFilter(select) {
+    if (!select || !select.multiple) return null;
+    const picked = new Set(
+      Array.from(select.selectedOptions)
+        .map((o) => o.value)
+        .filter((v) => v && v !== MULTI_ALL_VALUE),
+    );
+    if (!picked.size) return null;
+    return picked;
+  }
+
+  function setMultiSelectOnly(select, value) {
+    if (!select || !select.multiple) return false;
+    const opts = Array.from(select.options);
+    const hit = opts.find((o) => o.value === value);
+    if (!hit) return false;
+    opts.forEach((o) => {
+      o.selected = o.value === value;
+    });
+    syncMultiDropdownFromSelect(select);
+    return true;
   }
 
   function sortValuesByGmv(records, field) {
@@ -731,10 +1049,11 @@
     setDefaultCurrentRange(dates);
     state.compareManuallyChanged = false;
     syncCompareDates(true);
-    els.channelFilter.value = "all";
-    els.categoryFilter.value = "all";
+    resetMultiSelectToAll(els.channelFilter);
+    resetMultiSelectToAll(els.categoryFilter);
+    resetMultiSelectToAll(els.storeFilter);
     els.brandFilter.value = "all";
-    els.regionFilter.value = "all";
+    resetMultiSelectToAll(els.regionFilter);
     els.productSearch.value = "";
   }
 
@@ -844,8 +1163,10 @@
     renderChannel(context);
     renderProduct(context);
     renderAnomaly(context);
+    renderTraffic(context);
     renderRecommendation(context);
     updateHealthText(context);
+    window.dispatchEvent(new CustomEvent("ttl-dashboard-context-updated", { detail: { context } }));
     resizeCharts();
   }
 
@@ -863,18 +1184,23 @@
     const month = els.monthFilter.value;
     const start = els.startDateFilter.value;
     const end = els.endDateFilter.value;
-    const channel = els.channelFilter.value;
-    const category = els.categoryFilter.value;
+    const channelSet = readMultiFilter(els.channelFilter);
+    const categorySet = readMultiFilter(els.categoryFilter);
+    const storeSet = readMultiFilter(els.storeFilter);
     const brand = els.brandFilter.value;
-    const region = els.regionFilter.value;
+    const regionSet = readMultiFilter(els.regionFilter);
     const productKeyword = normalizeForSearch(els.productSearch.value);
 
     return records.filter((record) => {
       if (options.includeCategory) {
-        if (channel !== "all" && record.channel !== channel) return false;
-        if (category !== "all" && record.category !== category) return false;
+        if (channelSet && !channelSet.has(record.channel)) return false;
+        if (categorySet && !categorySet.has(record.category || "未识别类目")) return false;
+        if (storeSet) {
+          const sk = record.store != null ? String(record.store).trim() : "";
+          if (!sk || !storeSet.has(sk)) return false;
+        }
         if (brand !== "all" && record.brand !== brand) return false;
-        if (region !== "all" && record.region !== region) return false;
+        if (regionSet && !regionSet.has(record.region)) return false;
         if (productKeyword) {
           const productText = normalizeForSearch(`${record.product} ${record.sku}`);
           if (!productText.includes(productKeyword)) return false;
@@ -1983,6 +2309,194 @@
     renderList(els.anomalyDateList, [...highItems, ...lowItems, ...belowAvg, ...aboveAvg].slice(0, 10));
   }
 
+  function readTrafficNumber(record, key) {
+    const raw = record?.[key];
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function sumTrafficFromRecords(records) {
+    let visitors = 0;
+    let impressions = 0;
+    let clicks = 0;
+    let pageViews = 0;
+    let convWeight = 0;
+    let convNumerator = 0;
+    records.forEach((record) => {
+      visitors += readTrafficNumber(record, "visitors");
+      impressions += readTrafficNumber(record, "impressions");
+      clicks += readTrafficNumber(record, "clicks");
+      pageViews += readTrafficNumber(record, "pageViews");
+      const v = readTrafficNumber(record, "visitors");
+      let cvr = readTrafficNumber(record, "conversionRate");
+      if (cvr > 1.000001) cvr /= 100;
+      if (v > 0 && cvr > 0) {
+        convWeight += v;
+        convNumerator += v * cvr;
+      }
+    });
+    return { visitors, impressions, clicks, pageViews, convWeight, convNumerator };
+  }
+
+  function aggregateTrafficDailySeries(records) {
+    const map = new Map();
+    records.forEach((record) => {
+      const dk = record.dateKey;
+      if (!dk) return;
+      if (!map.has(dk)) {
+        map.set(dk, { date: dk, visitors: 0, impressions: 0, clicks: 0, pageViews: 0 });
+      }
+      const item = map.get(dk);
+      item.visitors += readTrafficNumber(record, "visitors");
+      item.impressions += readTrafficNumber(record, "impressions");
+      item.clicks += readTrafficNumber(record, "clicks");
+      item.pageViews += readTrafficNumber(record, "pageViews");
+    });
+    return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function aggregateTrafficByChannel(records) {
+    const map = new Map();
+    records.forEach((record) => {
+      const name = record.channel || "未识别渠道";
+      if (!map.has(name)) {
+        map.set(name, { name, visitors: 0, impressions: 0, clicks: 0 });
+      }
+      const item = map.get(name);
+      item.visitors += readTrafficNumber(record, "visitors");
+      item.impressions += readTrafficNumber(record, "impressions");
+      item.clicks += readTrafficNumber(record, "clicks");
+    });
+    return Array.from(map.values())
+      .filter((row) => row.visitors > 0 || row.impressions > 0 || row.clicks > 0)
+      .sort((a, b) => b.visitors - a.visitors || b.impressions - a.impressions || b.clicks - a.clicks);
+  }
+
+  function renderTraffic(context) {
+    const records = context.filteredRecords || [];
+    const sums = sumTrafficFromRecords(records);
+    const hasTraffic =
+      sums.visitors > 0 || sums.impressions > 0 || sums.clicks > 0 || sums.pageViews > 0;
+    const dateKeys = new Set(records.map((r) => r.dateKey).filter(Boolean));
+    const dayCount = dateKeys.size || 0;
+
+    if (!hasTraffic) {
+      setText(
+        "trafficConclusion",
+        "当前筛选下无可用流量汇总（数据包未携带访客/曝光/点击等可选指标，或汇总为 0）。出货与其他模块不受影响。",
+      );
+      setText("trafficKpiVisitors", "—");
+      setText("trafficKpiVisitorsSub", "无 UV / PV 汇总");
+      setText("trafficKpiImpressions", "—");
+      setText("trafficKpiClicks", "—");
+      setText("trafficKpiConv", "—");
+      setText("trafficKpiConvSub", "无点击率或转化率可算");
+      setChart("trafficDailyChart", emptyChartOption("暂无流量日序数据（指标为空或全为 0）"));
+      setChart("trafficChannelChart", emptyChartOption("暂无渠道流量对比"));
+      return;
+    }
+
+    const daily = aggregateTrafficDailySeries(records);
+    const byChannel = aggregateTrafficByChannel(records).slice(0, 15);
+
+    setText("trafficKpiVisitors", formatInteger(sums.visitors));
+    const pvLine =
+      sums.pageViews > 0
+        ? `累计 PV（浏览量）${formatInteger(sums.pageViews)}；日均访客 ${dayCount ? formatInteger(sums.visitors / dayCount) : "—"}`
+        : `访客即 UV 口径汇总；日均访客 ${dayCount ? formatInteger(sums.visitors / dayCount) : "—"}`;
+    setText("trafficKpiVisitorsSub", pvLine);
+
+    setText("trafficKpiImpressions", formatInteger(sums.impressions));
+    setText("trafficKpiClicks", formatInteger(sums.clicks));
+
+    let convMain = "—";
+    let convSub = "—";
+    if (sums.impressions > 0) {
+      convMain = formatPercent(sums.clicks / sums.impressions);
+      convSub = "点击率（点击 / 曝光）";
+    } else if (sums.visitors > 0 && sums.clicks > 0) {
+      convMain = formatPercent(sums.clicks / sums.visitors);
+      convSub = "点击 / 访客（无曝光列时）";
+    }
+    if (sums.convWeight > 0 && sums.convNumerator > 0) {
+      const w = sums.convNumerator / sums.convWeight;
+      if (sums.impressions <= 0) {
+        convMain = formatPercent(w);
+        convSub = "行加权平均转化率（按访客数加权）";
+      } else if (sums.clicks <= 0) {
+        convMain = formatPercent(w);
+        convSub = "行加权平均转化率（曝光存在但点击为 0 时）";
+      }
+    }
+    setText("trafficKpiConv", convMain);
+    setText("trafficKpiConvSub", convSub);
+
+    const topCh = byChannel[0];
+    const parts = [];
+    parts.push(
+      `${context.currentLabel || "当前筛选"}：访客 ${formatInteger(sums.visitors)}，曝光 ${formatInteger(sums.impressions)}，点击 ${formatInteger(sums.clicks)}。`,
+    );
+    if (topCh) parts.push(`访客最多的渠道为「${topCh.name}」。`);
+    setText("trafficConclusion", parts.join(""));
+
+    if (!daily.length) {
+      setChart("trafficDailyChart", emptyChartOption("暂无按日流量数据"));
+    } else {
+      setChart(
+        "trafficDailyChart",
+        {
+          ...baseChartOption(),
+          tooltip: { trigger: "axis" },
+          legend: { top: 0, right: 0, textStyle: { color: COLORS.muted } },
+          grid: chartGrid(),
+          xAxis: {
+            type: "category",
+            data: daily.map((item) => item.date),
+            axisLabel: { color: COLORS.muted },
+          },
+          yAxis: [
+            {
+              type: "value",
+              name: "访客",
+              axisLabel: { color: COLORS.muted, formatter: compactAxis },
+              splitLine: { lineStyle: { color: COLORS.grid } },
+            },
+            {
+              type: "value",
+              name: "点击",
+              position: "right",
+              axisLabel: { color: COLORS.muted, formatter: compactAxis },
+              splitLine: { show: false },
+            },
+          ],
+          series: [
+            {
+              name: "访客(UV)",
+              type: "line",
+              smooth: true,
+              yAxisIndex: 0,
+              showSymbol: false,
+              lineStyle: { width: 2, color: COLORS.primary },
+              data: daily.map((item) => round2(item.visitors)),
+            },
+            {
+              name: "点击",
+              type: "line",
+              smooth: true,
+              yAxisIndex: 1,
+              showSymbol: false,
+              lineStyle: { width: 2, color: COLORS.warning },
+              data: daily.map((item) => round2(item.clicks)),
+            },
+          ],
+        },
+        (params) => linkDateFilter(params.name),
+      );
+    }
+
+    renderHorizontalNumberBar("trafficChannelChart", byChannel, "访客(UV)", "visitors", linkChannelFilter);
+  }
+
   function renderRecommendation(context) {
     const priorities = buildPriorities(context);
     const actions = buildActionSuggestions(context);
@@ -2695,17 +3209,13 @@
 
   function linkChannelFilter(channel) {
     if (!channel) return;
-    const exists = Array.from(els.channelFilter.options).some((option) => option.value === channel);
-    if (!exists) return;
-    els.channelFilter.value = channel;
+    if (!setMultiSelectOnly(els.channelFilter, channel)) return;
     renderDashboard();
   }
 
   function linkCategoryFilter(category) {
     if (!category) return;
-    const exists = Array.from(els.categoryFilter.options).some((option) => option.value === category);
-    if (!exists) return;
-    els.categoryFilter.value = category;
+    if (!setMultiSelectOnly(els.categoryFilter, category)) return;
     renderDashboard();
   }
 
@@ -2721,6 +3231,7 @@
       日期: record.dateKey,
       月份: record.monthKey,
       渠道: record.channel,
+      店铺: record.store || "",
       产品大类: record.category,
       商品: record.product,
       商品编码: record.sku,
