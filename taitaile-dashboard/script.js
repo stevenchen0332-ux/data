@@ -116,6 +116,12 @@
       "brandFilterWrap",
       "regionFilter",
       "regionFilterWrap",
+      "channelFilterTrigger",
+      "channelFilterPanel",
+      "categoryFilterTrigger",
+      "categoryFilterPanel",
+      "regionFilterTrigger",
+      "regionFilterPanel",
       "productSearch",
       "resetFiltersBtn",
       "exportBtn",
@@ -179,6 +185,8 @@
   }
 
   function bindEvents() {
+    initMultiDropdowns();
+
     els.csvInput.addEventListener("change", (event) => {
       handleFiles(Array.from(event.target.files || []));
     });
@@ -223,6 +231,7 @@
       control.addEventListener(control.type === "search" ? "input" : "change", () => {
         if (control === els.channelFilter || control === els.categoryFilter || control === els.regionFilter) {
           syncMultiSelectExclusiveAll(control);
+          refreshMultiDropdownCheckboxes(control);
         }
         if (control === els.monthFilter) handleMonthFilterChange();
         if (control === els.startDateFilter || control === els.endDateFilter) {
@@ -711,6 +720,150 @@
 
     els.brandFilter.disabled = !enabled || els.brandFilterWrap.classList.contains("hidden");
     els.regionFilter.disabled = !enabled || els.regionFilterWrap.classList.contains("hidden");
+
+    [els.channelFilter, els.categoryFilter, els.regionFilter].forEach((select) => {
+      syncMultiDropdownFromSelect(select);
+    });
+  }
+
+  function getMultiDropdownParts(select) {
+    const root = select?.closest?.(".multi-dropdown-root");
+    if (!root) return null;
+    const trigger = root.querySelector(".multi-dropdown-trigger");
+    const panel = root.querySelector(".multi-dropdown-panel");
+    if (!trigger || !panel) return null;
+    return { root, trigger, panel };
+  }
+
+  function closeAllMultiDropdowns() {
+    document.querySelectorAll(".multi-dropdown-root.is-open").forEach((root) => root.classList.remove("is-open"));
+    document.querySelectorAll(".multi-dropdown-panel:not([hidden])").forEach((panel) => {
+      panel.hidden = true;
+    });
+    document.querySelectorAll(".multi-dropdown-trigger[aria-expanded='true']").forEach((btn) => {
+      btn.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function openMultiDropdown(trigger, panel) {
+    panel.hidden = false;
+    trigger.setAttribute("aria-expanded", "true");
+    const root = trigger.closest(".multi-dropdown-root");
+    if (root) root.classList.add("is-open");
+  }
+
+  function updateMultiDropdownTriggerText(select, trigger) {
+    const span = trigger.querySelector(".multi-dropdown-trigger-text");
+    if (!span) return;
+    const selected = Array.from(select.selectedOptions);
+    if (!selected.length) {
+      const allOpt = Array.from(select.options).find((o) => o.value === MULTI_ALL_VALUE);
+      span.textContent = allOpt ? allOpt.textContent : "—";
+      return;
+    }
+    if (selected.length === 1 && selected[0].value === MULTI_ALL_VALUE) {
+      span.textContent = selected[0].textContent;
+      return;
+    }
+    const specifics = selected.filter((o) => o.value !== MULTI_ALL_VALUE);
+    if (specifics.length === 1) {
+      span.textContent = specifics[0].textContent;
+      return;
+    }
+    span.textContent = `已选 ${specifics.length} 项`;
+  }
+
+  function syncCheckboxesFromSelect(select, panel) {
+    panel.querySelectorAll('input[type="checkbox"][data-md-value]').forEach((cb) => {
+      const val = cb.dataset.mdValue;
+      const opt = Array.from(select.options).find((o) => o.value === val);
+      if (opt) cb.checked = opt.selected;
+    });
+  }
+
+  function refreshMultiDropdownCheckboxes(select) {
+    const parts = getMultiDropdownParts(select);
+    if (!parts) return;
+    syncCheckboxesFromSelect(select, parts.panel);
+    updateMultiDropdownTriggerText(select, parts.trigger);
+  }
+
+  function rebuildMultiDropdownPanel(select, panel, trigger) {
+    panel.innerHTML = "";
+    Array.from(select.options).forEach((opt, index) => {
+      const row = document.createElement("div");
+      row.className = "multi-dropdown-option";
+      row.setAttribute("role", "option");
+      const safeId = `${select.id}-md-${index}`;
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = safeId;
+      cb.checked = opt.selected;
+      cb.dataset.mdValue = opt.value;
+      const lab = document.createElement("label");
+      lab.htmlFor = safeId;
+      lab.textContent = opt.textContent;
+      row.appendChild(cb);
+      row.appendChild(lab);
+      panel.appendChild(row);
+
+      cb.addEventListener("change", () => {
+        const targetOpt = Array.from(select.options).find((o) => o.value === opt.value);
+        if (!targetOpt) return;
+        targetOpt.selected = cb.checked;
+        syncMultiSelectExclusiveAll(select);
+        syncCheckboxesFromSelect(select, panel);
+        updateMultiDropdownTriggerText(select, trigger);
+        renderDashboard();
+      });
+    });
+  }
+
+  function syncMultiDropdownFromSelect(select) {
+    const parts = getMultiDropdownParts(select);
+    if (!parts) return;
+    const { trigger, panel } = parts;
+    trigger.disabled = select.disabled;
+    updateMultiDropdownTriggerText(select, trigger);
+    rebuildMultiDropdownPanel(select, panel, trigger);
+  }
+
+  function initMultiDropdowns() {
+    const rows = [
+      { select: els.channelFilter, trigger: els.channelFilterTrigger, panel: els.channelFilterPanel },
+      { select: els.categoryFilter, trigger: els.categoryFilterTrigger, panel: els.categoryFilterPanel },
+      { select: els.regionFilter, trigger: els.regionFilterTrigger, panel: els.regionFilterPanel },
+    ].filter((row) => row.select && row.trigger && row.panel);
+
+    rows.forEach(({ select, trigger, panel }) => {
+      panel.addEventListener("mousedown", (event) => {
+        event.stopPropagation();
+      });
+      trigger.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (select.disabled) return;
+        const willOpen = panel.hidden;
+        closeAllMultiDropdowns();
+        if (willOpen) {
+          syncMultiDropdownFromSelect(select);
+          openMultiDropdown(trigger, panel);
+        }
+      });
+    });
+
+    document.addEventListener(
+      "mousedown",
+      (event) => {
+        if (!(event.target instanceof Element)) return;
+        if (event.target.closest(".multi-dropdown-root")) return;
+        closeAllMultiDropdowns();
+      },
+      true,
+    );
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeAllMultiDropdowns();
+    });
   }
 
   function fillSelect(select, values, allLabel, labelFormatter = (value) => value) {
@@ -746,6 +899,7 @@
     Array.from(select.options).forEach((o) => {
       o.selected = o.value === MULTI_ALL_VALUE;
     });
+    syncMultiDropdownFromSelect(select);
   }
 
   function fillMultiSelect(select, values, allLabel, labelFormatter = (value) => value) {
@@ -770,11 +924,13 @@
     const restored = [...prev].filter((v) => v === MULTI_ALL_VALUE || valueSet.has(v));
     if (!restored.length || restored.includes(MULTI_ALL_VALUE)) {
       allOpt.selected = true;
+      syncMultiDropdownFromSelect(select);
       return;
     }
     Array.from(select.options).forEach((o) => {
       o.selected = restored.includes(o.value);
     });
+    syncMultiDropdownFromSelect(select);
   }
 
   function readMultiFilter(select) {
@@ -796,6 +952,7 @@
     opts.forEach((o) => {
       o.selected = o.value === value;
     });
+    syncMultiDropdownFromSelect(select);
     return true;
   }
 

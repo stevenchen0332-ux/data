@@ -79,52 +79,101 @@
         </section>
 
         <section class="filter-bar" aria-label="全局筛选">
-          <div class="filter-field">
-            <label for="monthFilter">月份</label>
-            <select id="monthFilter" disabled>
-              <option value="all">全部月份</option>
-            </select>
+          <div class="filter-bar-row filter-bar-row-dates">
+            <div class="filter-field">
+              <label for="monthFilter">月份</label>
+              <select id="monthFilter" disabled>
+                <option value="all">全部月份</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="startDateFilter">开始日期</label>
+              <input id="startDateFilter" type="date" disabled />
+            </div>
+            <div class="filter-field">
+              <label for="endDateFilter">结束日期</label>
+              <input id="endDateFilter" type="date" disabled />
+            </div>
+            <div class="filter-field">
+              <label for="compareStartDateFilter">对比开始</label>
+              <input id="compareStartDateFilter" type="date" disabled />
+            </div>
+            <div class="filter-field">
+              <label for="compareEndDateFilter">对比结束</label>
+              <input id="compareEndDateFilter" type="date" disabled />
+            </div>
           </div>
-          <div class="filter-field">
-            <label for="startDateFilter">开始日期</label>
-            <input id="startDateFilter" type="date" disabled />
-          </div>
-          <div class="filter-field">
-            <label for="endDateFilter">结束日期</label>
-            <input id="endDateFilter" type="date" disabled />
-          </div>
-          <div class="filter-field">
-            <label for="compareStartDateFilter">对比开始</label>
-            <input id="compareStartDateFilter" type="date" disabled />
-          </div>
-          <div class="filter-field">
-            <label for="compareEndDateFilter">对比结束</label>
-            <input id="compareEndDateFilter" type="date" disabled />
-          </div>
-          <div class="filter-field filter-field-multi">
-            <label for="channelFilter">渠道</label>
-            <select id="channelFilter" class="filter-select-multi" multiple size="5" disabled title="按住 Ctrl（Windows）或 ⌘（Mac）可多选"></select>
-            <small class="filter-multi-hint">可多选；默认「全部」</small>
-          </div>
-          <div class="filter-field filter-field-multi">
-            <label for="categoryFilter">产品大类</label>
-            <select id="categoryFilter" class="filter-select-multi" multiple size="5" disabled title="按住 Ctrl（Windows）或 ⌘（Mac）可多选"></select>
-            <small class="filter-multi-hint">可多选；默认「全部」</small>
-          </div>
-          <div class="filter-field optional-filter hidden" id="brandFilterWrap">
-            <label for="brandFilter">品牌</label>
-            <select id="brandFilter" disabled>
-              <option value="all">全部品牌</option>
-            </select>
-          </div>
-          <div class="filter-field filter-field-multi optional-filter hidden" id="regionFilterWrap">
-            <label for="regionFilter">地区</label>
-            <select id="regionFilter" class="filter-select-multi" multiple size="5" disabled title="按住 Ctrl（Windows）或 ⌘（Mac）可多选"></select>
-            <small class="filter-multi-hint">可多选；默认「全部」</small>
-          </div>
-          <div class="filter-field search-field">
-            <label for="productSearch">商品搜索</label>
-            <input id="productSearch" type="search" placeholder="输入商品名或编码" disabled />
+          <div class="filter-bar-row filter-bar-row-dims">
+            <div class="filter-field filter-field-multi-dropdown">
+              <label for="channelFilterTrigger">渠道</label>
+              <div class="multi-dropdown-root">
+                <select id="channelFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="channelFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="channelFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部渠道</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="channelFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+              <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
+            </div>
+            <div class="filter-field filter-field-multi-dropdown">
+              <label for="categoryFilterTrigger">产品大类</label>
+              <div class="multi-dropdown-root">
+                <select id="categoryFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="categoryFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="categoryFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部大类</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="categoryFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+              <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
+            </div>
+            <div class="filter-field optional-filter hidden" id="brandFilterWrap">
+              <label for="brandFilter">品牌</label>
+              <select id="brandFilter" disabled>
+                <option value="all">全部品牌</option>
+              </select>
+            </div>
+            <div class="filter-field filter-field-multi-dropdown optional-filter hidden" id="regionFilterWrap">
+              <label for="regionFilterTrigger">地区</label>
+              <div class="multi-dropdown-root">
+                <select id="regionFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="regionFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="regionFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部地区</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="regionFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+              <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
+            </div>
+            <div class="filter-field search-field">
+              <label for="productSearch">商品搜索</label>
+              <input id="productSearch" type="search" placeholder="输入商品名或编码" disabled />
+            </div>
           </div>
         </section>
 
