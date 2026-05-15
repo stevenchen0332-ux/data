@@ -3,7 +3,7 @@
 
   const FIELD_ALIASES = {
     date: ["订单日期", "发货时间", "出货日期", "日期", "日", "date", "orderdate", "shipdate"],
-    store: ["店铺", "店铺名称", "网店", "店铺名", "门店名称", "shop", "store", "store name", "店铺编码"],
+    store: ["店铺", "店铺名称", "网店", "店铺名", "门店名称", "shop", "store name", "店铺编码"],
     channel: ["经销商", "渠道", "门店", "客户"],
     product: ["商品名称", "品名", "货品名称", "SKU名称", "sku名称", "产品名称"],
     sku: ["商品编码", "货品编号", "SKU编号", "sku编号", "编码", "货号"],
