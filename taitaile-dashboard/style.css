@@ -393,24 +393,50 @@ input:disabled {
 }
 
 .filter-bar-row-dims {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.filter-dims-primary-grid {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  align-items: end;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.filter-dims-primary-grid.has-store {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.filter-dims-primary-grid > .filter-field {
+  min-width: 0;
+}
+
+.filter-field-search-inline input[type="search"] {
+  width: 100%;
+}
+
+.filter-dims-secondary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: flex-end;
 }
 
-.filter-bar-row-dims .filter-field-multi-dropdown {
-  flex: 0 1 168px;
-  min-width: 140px;
-  max-width: 200px;
+.filter-dims-secondary-row > .filter-field {
+  flex: 0 1 200px;
+  min-width: 160px;
+  max-width: 280px;
 }
 
-.filter-bar-row-dims .filter-field:not(.filter-field-multi-dropdown):not(.search-field) {
-  flex: 0 1 140px;
-  min-width: 120px;
-}
-
-.filter-bar-row-dims .search-field {
-  flex: 1 1 240px;
-  min-width: min(100%, 220px);
-  max-width: 100%;
+.filter-dims-secondary-row > .filter-field-multi-dropdown {
+  flex: 0 1 200px;
+  min-width: 160px;
+  max-width: 280px;
 }
 
 .filter-field {
@@ -1006,9 +1032,12 @@ td {
     max-width: none;
   }
 
-  .filter-bar-row-dims .filter-field-multi-dropdown {
-    flex: 1 1 45%;
-    max-width: none;
+  .filter-dims-primary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-dims-primary-grid.has-store {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .kpi-grid {
@@ -1065,9 +1094,20 @@ td {
     align-items: stretch;
   }
 
-  .filter-bar-row-dates .filter-field,
-  .filter-bar-row-dims .filter-field-multi-dropdown,
-  .filter-bar-row-dims .search-field {
+  .filter-bar-row-dates .filter-field {
+    flex: 1 1 auto;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .filter-dims-primary-grid,
+  .filter-dims-primary-grid.has-store {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-dims-secondary-row,
+  .filter-dims-secondary-row > .filter-field,
+  .filter-dims-secondary-row > .filter-field-multi-dropdown {
     flex: 1 1 auto;
     max-width: none;
     min-width: 0;

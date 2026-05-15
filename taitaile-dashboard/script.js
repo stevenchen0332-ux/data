@@ -3,7 +3,8 @@
 
   const FIELD_ALIASES = {
     date: ["订单日期", "发货时间", "出货日期", "日期", "日", "date", "orderdate", "shipdate"],
-    channel: ["经销商", "渠道", "店铺", "店铺名称", "门店", "客户"],
+    store: ["店铺", "店铺名称", "网店", "店铺名", "门店名称", "shop", "store", "store name", "店铺编码"],
+    channel: ["经销商", "渠道", "门店", "客户"],
     product: ["商品名称", "品名", "货品名称", "SKU名称", "sku名称", "产品名称"],
     sku: ["商品编码", "货品编号", "SKU编号", "sku编号", "编码", "货号"],
     quantity: ["数量", "出货数量", "销售数量", "货品数量", "销量", "件数"],
@@ -18,6 +19,7 @@
   const FIELD_LABELS = {
     date: "日期",
     channel: "渠道",
+    store: "店铺",
     product: "商品",
     sku: "商品编码",
     quantity: "数量",
@@ -66,6 +68,7 @@
     fieldCoverage: {
       brand: false,
       region: false,
+      store: false,
       orderId: false,
     },
   };
@@ -112,6 +115,9 @@
       "compareEndDateFilter",
       "channelFilter",
       "categoryFilter",
+      "storeFilter",
+      "storeFilterWrap",
+      "filterDimsPrimaryGrid",
       "brandFilter",
       "brandFilterWrap",
       "regionFilter",
@@ -120,6 +126,8 @@
       "channelFilterPanel",
       "categoryFilterTrigger",
       "categoryFilterPanel",
+      "storeFilterTrigger",
+      "storeFilterPanel",
       "regionFilterTrigger",
       "regionFilterPanel",
       "productSearch",
@@ -222,6 +230,7 @@
       els.endDateFilter,
       els.channelFilter,
       els.categoryFilter,
+      els.storeFilter,
       els.brandFilter,
       els.regionFilter,
       els.productSearch,
@@ -229,7 +238,12 @@
 
     filterControls.forEach((control) => {
       control.addEventListener(control.type === "search" ? "input" : "change", () => {
-        if (control === els.channelFilter || control === els.categoryFilter || control === els.regionFilter) {
+        if (
+          control === els.channelFilter ||
+          control === els.categoryFilter ||
+          control === els.storeFilter ||
+          control === els.regionFilter
+        ) {
           syncMultiSelectExclusiveAll(control);
           refreshMultiDropdownCheckboxes(control);
         }
@@ -348,6 +362,7 @@
         sku: product.sku || "",
         productKey: `${product.product || "未识别商品"}__${product.sku || "NO_SKU"}`,
         category: dims.categories[row[3]] || "未识别类目",
+        store: "",
         quantity: Number(row[6]) || 0,
         amount: Number(row[5]) || 0,
         brand: "",
@@ -399,6 +414,7 @@
     state.fieldCoverage = {
       brand: state.allRecords.some((record) => record.brand),
       region: state.allRecords.some((record) => record.region),
+      store: state.allRecords.some((record) => record.store),
       orderId: state.allRecords.some((record) => record.orderId),
     };
 
@@ -518,6 +534,7 @@
     const rows = Array.isArray(result.data) ? result.data : [];
     const headers = (result.meta.fields || []).filter(Boolean);
     const fields = detectFields(headers);
+    ensureChannelColumnWhenMissing(fields);
     const missing = REQUIRED_FIELDS.filter((field) => !fields[field]);
     const parsedRows = [];
     let invalidRows = 0;
@@ -539,6 +556,12 @@
     };
   }
 
+  function ensureChannelColumnWhenMissing(fields) {
+    if (!fields.channel && fields.store) {
+      fields.channel = fields.store;
+    }
+  }
+
   function parseCsvFile(file) {
     return new Promise((resolve, reject) => {
       Papa.parse(file, {
@@ -550,6 +573,7 @@
           const rows = Array.isArray(result.data) ? result.data : [];
           const headers = (result.meta.fields || []).filter(Boolean);
           const fields = detectFields(headers);
+          ensureChannelColumnWhenMissing(fields);
           const missing = REQUIRED_FIELDS.filter((field) => !fields[field]);
           const parsedRows = [];
           let invalidRows = 0;
@@ -617,7 +641,7 @@
     const text = normalizedHeader;
     const matchers = {
       date: () => /(日期|时间|date|time|day)/i.test(text),
-      channel: () => /(经销商|渠道|店铺|门店|客户|分销|channel|dealer|store)/i.test(text),
+      channel: () => /(经销商|渠道|门店|客户|分销|channel|dealer)/i.test(text),
       product: () => /(商品|品名|货品|产品|sku名称|productname|itemname)/i.test(text) && !/(编码|编号|code|id)/i.test(text),
       sku: () => /(商品编码|货品编号|sku编号|sku|编码|编号|code)/i.test(text) && !/(名称|name)/i.test(text),
       quantity: () => /(数量|销量|件数|出货量|qty|quantity|volume)/i.test(text) && !/(日期|时间|date|time)/i.test(text),
@@ -627,6 +651,9 @@
       orderId: () => /(订单|发货单|交易单|单据|单号|order|bill|no|id)/i.test(text),
       category: () =>
         /(产品大类|类目|品类|商品类目|category)/i.test(text) && !/(商品名称|品名|货品名称|编码)/i.test(text),
+      store: () =>
+        /(店铺|网店|shop|store)/i.test(text) &&
+        !/(商品|品名|货品|产品|渠道|经销商|金额|数量|编码|日期)/i.test(text),
     };
     return matchers[group] ? matchers[group]() : false;
   }
@@ -639,6 +666,7 @@
     const product = cleanText(getCell(row, fields.product)) || "未识别商品";
     const sku = cleanText(getCell(row, fields.sku));
     const channel = cleanText(getCell(row, fields.channel)) || "未识别渠道";
+    const store = cleanText(getCell(row, fields.store));
     const quantity = fields.quantity ? parseNumberValue(getCell(row, fields.quantity)) : 0;
     const amount = fields.amount ? parseNumberValue(getCell(row, fields.amount)) : 0;
     const brand = cleanText(getCell(row, fields.brand));
@@ -652,6 +680,7 @@
       dateKey,
       monthKey: dateKey.slice(0, 7),
       channel,
+      store,
       product,
       sku,
       productKey: `${product}__${sku || "NO_SKU"}`,
@@ -678,6 +707,7 @@
     const categories = sortValuesByGmv(state.allRecords, "category");
     const brands = sortValuesByGmv(state.allRecords.filter((record) => record.brand), "brand");
     const regions = sortValuesByGmv(state.allRecords.filter((record) => record.region), "region");
+    const stores = sortValuesByGmv(state.allRecords.filter((record) => record.store), "store");
     const dates = state.allRecords.map((record) => record.dateKey).sort();
 
     fillSelect(els.monthFilter, months, "全部月份", formatMonthLabel);
@@ -685,9 +715,14 @@
     fillMultiSelect(els.categoryFilter, categories, "全部大类");
     fillSelect(els.brandFilter, brands, "全部品牌");
     fillMultiSelect(els.regionFilter, regions, "全部地区");
+    fillMultiSelect(els.storeFilter, stores, "全部店铺");
 
     els.brandFilterWrap.classList.toggle("hidden", !brands.length);
     els.regionFilterWrap.classList.toggle("hidden", !regions.length);
+    els.storeFilterWrap.classList.toggle("hidden", !stores.length);
+    if (els.filterDimsPrimaryGrid) {
+      els.filterDimsPrimaryGrid.classList.toggle("has-store", stores.length > 0);
+    }
 
     if (dates.length) {
       els.startDateFilter.min = dates[0];
@@ -712,6 +747,7 @@
       els.compareEndDateFilter,
       els.channelFilter,
       els.categoryFilter,
+      els.storeFilter,
       els.productSearch,
       els.exportBtn,
     ].forEach((control) => {
@@ -720,8 +756,9 @@
 
     els.brandFilter.disabled = !enabled || els.brandFilterWrap.classList.contains("hidden");
     els.regionFilter.disabled = !enabled || els.regionFilterWrap.classList.contains("hidden");
+    els.storeFilter.disabled = !enabled || els.storeFilterWrap.classList.contains("hidden");
 
-    [els.channelFilter, els.categoryFilter, els.regionFilter].forEach((select) => {
+    [els.channelFilter, els.categoryFilter, els.storeFilter, els.regionFilter].forEach((select) => {
       syncMultiDropdownFromSelect(select);
     });
   }
@@ -832,6 +869,7 @@
     const rows = [
       { select: els.channelFilter, trigger: els.channelFilterTrigger, panel: els.channelFilterPanel },
       { select: els.categoryFilter, trigger: els.categoryFilterTrigger, panel: els.categoryFilterPanel },
+      { select: els.storeFilter, trigger: els.storeFilterTrigger, panel: els.storeFilterPanel },
       { select: els.regionFilter, trigger: els.regionFilterTrigger, panel: els.regionFilterPanel },
     ].filter((row) => row.select && row.trigger && row.panel);
 
@@ -976,6 +1014,7 @@
     syncCompareDates(true);
     resetMultiSelectToAll(els.channelFilter);
     resetMultiSelectToAll(els.categoryFilter);
+    resetMultiSelectToAll(els.storeFilter);
     els.brandFilter.value = "all";
     resetMultiSelectToAll(els.regionFilter);
     els.productSearch.value = "";
@@ -1108,6 +1147,7 @@
     const end = els.endDateFilter.value;
     const channelSet = readMultiFilter(els.channelFilter);
     const categorySet = readMultiFilter(els.categoryFilter);
+    const storeSet = readMultiFilter(els.storeFilter);
     const brand = els.brandFilter.value;
     const regionSet = readMultiFilter(els.regionFilter);
     const productKeyword = normalizeForSearch(els.productSearch.value);
@@ -1116,6 +1156,7 @@
       if (options.includeCategory) {
         if (channelSet && !channelSet.has(record.channel)) return false;
         if (categorySet && !categorySet.has(record.category || "未识别类目")) return false;
+        if (storeSet && (!record.store || !storeSet.has(record.store))) return false;
         if (brand !== "all" && record.brand !== brand) return false;
         if (regionSet && !regionSet.has(record.region)) return false;
         if (productKeyword) {
@@ -2960,6 +3001,7 @@
       日期: record.dateKey,
       月份: record.monthKey,
       渠道: record.channel,
+      店铺: record.store || "",
       产品大类: record.category,
       商品: record.product,
       商品编码: record.sku,
