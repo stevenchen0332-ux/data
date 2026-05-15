@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-05-15",
+  "status": "shipment_only",
+  "reason": "用户确认流量数据不完整，因此当前发布版不接入流量、转化、推广费用、ROI 等口径。",
+  "localShipmentDataUsed": {
+    "source": "/Users/chenjiwei/Desktop/日数据",
+    "files": 5,
+    "factRows": 458738,
+    "dateRange": ["2026-01-01", "2026-05-14"],
+    "fields": ["日期", "经销商", "店铺", "商品编码", "商品名称", "数量", "GMV", "省", "市", "区县", "产品大类", "产品名称", "年份", "月份", "日"]
+  },
+  "excludedData": {
+    "source": "/Users/chenjiwei/Desktop/日数据/流量",
+    "reason": "数据不完整，未参与本版计算"
+  },
+  "calculationPolicy": "所有页面指标均来自 data-bundle.js 内嵌的本地出货数据；未来 7 日预估基于历史出货 GMV 趋势生成，不作为真实销售数据。"
+}
