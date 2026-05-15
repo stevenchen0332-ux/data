@@ -11,6 +11,7 @@
     region: ["省", "省份", "州省", "市", "城市", "区县", "地区", "区域"],
     brand: ["品牌", "品牌名称", "brand"],
     orderId: ["订单号", "订单编号", "发货单号", "发货单编号", "交易单号", "单据编号", "单号", "订单ID"],
+    category: ["产品大类", "类目", "品类", "商品类目"],
   };
 
   const REQUIRED_FIELDS = ["date", "channel", "product", "quantity", "amount"];
@@ -24,6 +25,7 @@
     region: "地区",
     brand: "品牌",
     orderId: "订单 / 发货单",
+    category: "产品大类",
     visitors: "访客",
     conversionRate: "转化率",
     promotionSpend: "推广花费",
@@ -50,6 +52,9 @@
     text: "#172033",
     palette: ["#7fc0b8", "#f2d36b", "#91b8d8", "#f7a6b5", "#95c48b", "#f3aa67", "#9a86b8", "#d56e6e", "#7a9cc6"],
   };
+
+  /** 多选下拉中「全部」选项的 value，勿与真实渠道/类目重名 */
+  const MULTI_ALL_VALUE = "__all__";
 
   const state = {
     allRecords: [],
@@ -216,6 +221,9 @@
 
     filterControls.forEach((control) => {
       control.addEventListener(control.type === "search" ? "input" : "change", () => {
+        if (control === els.channelFilter || control === els.categoryFilter || control === els.regionFilter) {
+          syncMultiSelectExclusiveAll(control);
+        }
         if (control === els.monthFilter) handleMonthFilterChange();
         if (control === els.startDateFilter || control === els.endDateFilter) {
           syncCompareDates();
@@ -608,6 +616,8 @@
       region: () => /(省|市|区县|地区|区域|城市|province|city|region)/i.test(text),
       brand: () => /(品牌|brand)/i.test(text),
       orderId: () => /(订单|发货单|交易单|单据|单号|order|bill|no|id)/i.test(text),
+      category: () =>
+        /(产品大类|类目|品类|商品类目|category)/i.test(text) && !/(商品名称|品名|货品名称|编码)/i.test(text),
     };
     return matchers[group] ? matchers[group]() : false;
   }
@@ -624,6 +634,7 @@
     const amount = fields.amount ? parseNumberValue(getCell(row, fields.amount)) : 0;
     const brand = cleanText(getCell(row, fields.brand));
     const region = cleanText(getCell(row, fields.region));
+    const category = cleanText(getCell(row, fields.category)) || "未识别类目";
     const orderId = cleanText(getCell(row, fields.orderId));
     const dateKey = toDateKey(date);
 
@@ -639,6 +650,7 @@
       amount,
       brand,
       region,
+      category,
       orderId,
       fileName,
       rowNumber,
@@ -660,10 +672,10 @@
     const dates = state.allRecords.map((record) => record.dateKey).sort();
 
     fillSelect(els.monthFilter, months, "全部月份", formatMonthLabel);
-    fillSelect(els.channelFilter, channels, "全部渠道");
-    fillSelect(els.categoryFilter, categories, "全部大类");
+    fillMultiSelect(els.channelFilter, channels, "全部渠道");
+    fillMultiSelect(els.categoryFilter, categories, "全部大类");
     fillSelect(els.brandFilter, brands, "全部品牌");
-    fillSelect(els.regionFilter, regions, "全部地区");
+    fillMultiSelect(els.regionFilter, regions, "全部地区");
 
     els.brandFilterWrap.classList.toggle("hidden", !brands.length);
     els.regionFilterWrap.classList.toggle("hidden", !regions.length);
@@ -713,6 +725,80 @@
     select.value = values.includes(current) ? current : "all";
   }
 
+  function syncMultiSelectExclusiveAll(select) {
+    if (!select || !select.multiple) return;
+    const opts = Array.from(select.options);
+    const selected = opts.filter((o) => o.selected);
+    if (!selected.length) {
+      const allOpt = opts.find((o) => o.value === MULTI_ALL_VALUE);
+      if (allOpt) allOpt.selected = true;
+      return;
+    }
+    if (selected.length > 1 && selected.some((o) => o.value === MULTI_ALL_VALUE)) {
+      opts.forEach((o) => {
+        if (o.value === MULTI_ALL_VALUE) o.selected = false;
+      });
+    }
+  }
+
+  function resetMultiSelectToAll(select) {
+    if (!select || !select.multiple) return;
+    Array.from(select.options).forEach((o) => {
+      o.selected = o.value === MULTI_ALL_VALUE;
+    });
+  }
+
+  function fillMultiSelect(select, values, allLabel, labelFormatter = (value) => value) {
+    const prev = new Set(
+      Array.from(select.selectedOptions)
+        .map((o) => o.value)
+        .filter(Boolean),
+    );
+    const valueSet = new Set(values);
+    select.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = MULTI_ALL_VALUE;
+    allOpt.textContent = allLabel;
+    select.appendChild(allOpt);
+    values.forEach((value) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = labelFormatter(value);
+      select.appendChild(option);
+    });
+
+    const restored = [...prev].filter((v) => v === MULTI_ALL_VALUE || valueSet.has(v));
+    if (!restored.length || restored.includes(MULTI_ALL_VALUE)) {
+      allOpt.selected = true;
+      return;
+    }
+    Array.from(select.options).forEach((o) => {
+      o.selected = restored.includes(o.value);
+    });
+  }
+
+  function readMultiFilter(select) {
+    if (!select || !select.multiple) return null;
+    const picked = new Set(
+      Array.from(select.selectedOptions)
+        .map((o) => o.value)
+        .filter((v) => v && v !== MULTI_ALL_VALUE),
+    );
+    if (!picked.size) return null;
+    return picked;
+  }
+
+  function setMultiSelectOnly(select, value) {
+    if (!select || !select.multiple) return false;
+    const opts = Array.from(select.options);
+    const hit = opts.find((o) => o.value === value);
+    if (!hit) return false;
+    opts.forEach((o) => {
+      o.selected = o.value === value;
+    });
+    return true;
+  }
+
   function sortValuesByGmv(records, field) {
     const map = new Map();
     records.forEach((record) => {
@@ -731,10 +817,10 @@
     setDefaultCurrentRange(dates);
     state.compareManuallyChanged = false;
     syncCompareDates(true);
-    els.channelFilter.value = "all";
-    els.categoryFilter.value = "all";
+    resetMultiSelectToAll(els.channelFilter);
+    resetMultiSelectToAll(els.categoryFilter);
     els.brandFilter.value = "all";
-    els.regionFilter.value = "all";
+    resetMultiSelectToAll(els.regionFilter);
     els.productSearch.value = "";
   }
 
@@ -863,18 +949,18 @@
     const month = els.monthFilter.value;
     const start = els.startDateFilter.value;
     const end = els.endDateFilter.value;
-    const channel = els.channelFilter.value;
-    const category = els.categoryFilter.value;
+    const channelSet = readMultiFilter(els.channelFilter);
+    const categorySet = readMultiFilter(els.categoryFilter);
     const brand = els.brandFilter.value;
-    const region = els.regionFilter.value;
+    const regionSet = readMultiFilter(els.regionFilter);
     const productKeyword = normalizeForSearch(els.productSearch.value);
 
     return records.filter((record) => {
       if (options.includeCategory) {
-        if (channel !== "all" && record.channel !== channel) return false;
-        if (category !== "all" && record.category !== category) return false;
+        if (channelSet && !channelSet.has(record.channel)) return false;
+        if (categorySet && !categorySet.has(record.category || "未识别类目")) return false;
         if (brand !== "all" && record.brand !== brand) return false;
-        if (region !== "all" && record.region !== region) return false;
+        if (regionSet && !regionSet.has(record.region)) return false;
         if (productKeyword) {
           const productText = normalizeForSearch(`${record.product} ${record.sku}`);
           if (!productText.includes(productKeyword)) return false;
@@ -2695,17 +2781,13 @@
 
   function linkChannelFilter(channel) {
     if (!channel) return;
-    const exists = Array.from(els.channelFilter.options).some((option) => option.value === channel);
-    if (!exists) return;
-    els.channelFilter.value = channel;
+    if (!setMultiSelectOnly(els.channelFilter, channel)) return;
     renderDashboard();
   }
 
   function linkCategoryFilter(category) {
     if (!category) return;
-    const exists = Array.from(els.categoryFilter.options).some((option) => option.value === category);
-    if (!exists) return;
-    els.categoryFilter.value = category;
+    if (!setMultiSelectOnly(els.categoryFilter, category)) return;
     renderDashboard();
   }
 

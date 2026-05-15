@@ -101,17 +101,15 @@
             <label for="compareEndDateFilter">对比结束</label>
             <input id="compareEndDateFilter" type="date" disabled />
           </div>
-          <div class="filter-field">
+          <div class="filter-field filter-field-multi">
             <label for="channelFilter">渠道</label>
-            <select id="channelFilter" disabled>
-              <option value="all">全部渠道</option>
-            </select>
+            <select id="channelFilter" class="filter-select-multi" multiple size="5" disabled title="按住 Ctrl（Windows）或 ⌘（Mac）可多选"></select>
+            <small class="filter-multi-hint">可多选；默认「全部」</small>
           </div>
-          <div class="filter-field">
+          <div class="filter-field filter-field-multi">
             <label for="categoryFilter">产品大类</label>
-            <select id="categoryFilter" disabled>
-              <option value="all">全部大类</option>
-            </select>
+            <select id="categoryFilter" class="filter-select-multi" multiple size="5" disabled title="按住 Ctrl（Windows）或 ⌘（Mac）可多选"></select>
+            <small class="filter-multi-hint">可多选；默认「全部」</small>
           </div>
           <div class="filter-field optional-filter hidden" id="brandFilterWrap">
             <label for="brandFilter">品牌</label>
@@ -119,11 +117,10 @@
               <option value="all">全部品牌</option>
             </select>
           </div>
-          <div class="filter-field optional-filter hidden" id="regionFilterWrap">
+          <div class="filter-field filter-field-multi optional-filter hidden" id="regionFilterWrap">
             <label for="regionFilter">地区</label>
-            <select id="regionFilter" disabled>
-              <option value="all">全部地区</option>
-            </select>
+            <select id="regionFilter" class="filter-select-multi" multiple size="5" disabled title="按住 Ctrl（Windows）或 ⌘（Mac）可多选"></select>
+            <small class="filter-multi-hint">可多选；默认「全部」</small>
           </div>
           <div class="filter-field search-field">
             <label for="productSearch">商品搜索</label>
