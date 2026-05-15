@@ -63,8 +63,6 @@
     filteredRecords: [],
     fileReports: [],
     dataBundle: null,
-    /** 无店铺列时，店铺下拉与筛选使用渠道值（常见于仅含 data-bundle 的发布包） */
-    storeFilterUsesChannel: false,
     compareManuallyChanged: false,
     chartInstances: {},
     fieldCoverage: {
@@ -347,14 +345,30 @@
     const bundle = window.TTL_DASHBOARD_DATA;
     const dims = bundle.dims || {};
     const products = dims.products || [];
+    const stores = dims.stores;
+    const hasStoreDim = Array.isArray(stores) && stores.length > 0;
     const metricKeys = bundle.metrics || bundle.meta?.operationFields || [];
     const records = (bundle.rows || []).map((row, index) => {
-      const product = products[row[2]] || {};
+      const pi = hasStoreDim ? 3 : 2;
+      const ci = hasStoreDim ? 4 : 3;
+      const ri = hasStoreDim ? 5 : 4;
+      const amountI = hasStoreDim ? 6 : 5;
+      const qtyI = hasStoreDim ? 7 : 6;
+      const ordersI = hasStoreDim ? 8 : 7;
+      const metricBase = hasStoreDim ? 9 : 8;
+      const product = products[row[pi]] || {};
       const dateKey = dims.dates[row[0]];
       const metrics = {};
       metricKeys.forEach((key, metricIndex) => {
-        metrics[key] = Number(row[8 + metricIndex]) || 0;
+        metrics[key] = Number(row[metricBase + metricIndex]) || 0;
       });
+      let storeVal = "";
+      if (hasStoreDim && row.length > 2) {
+        const si = Number(row[2]);
+        if (Number.isFinite(si) && si >= 0 && stores[si] != null && String(stores[si]).trim() !== "") {
+          storeVal = String(stores[si]).trim();
+        }
+      }
       return {
         date: parseDateValue(dateKey),
         dateKey,
@@ -363,14 +377,14 @@
         product: product.product || "未识别商品",
         sku: product.sku || "",
         productKey: `${product.product || "未识别商品"}__${product.sku || "NO_SKU"}`,
-        category: dims.categories[row[3]] || "未识别类目",
-        store: "",
-        quantity: Number(row[6]) || 0,
-        amount: Number(row[5]) || 0,
+        category: dims.categories[row[ci]] || "未识别类目",
+        store: storeVal,
+        quantity: Number(row[qtyI]) || 0,
+        amount: Number(row[amountI]) || 0,
         brand: "",
-        region: dims.regions[row[4]] || "未识别地区",
+        region: dims.regions[row[ri]] || "未识别地区",
         orderId: "",
-        orderCount: Number(row[7]) || 0,
+        orderCount: Number(row[ordersI]) || 0,
         visitors: metrics.visitors || 0,
         conversionRate: metrics.conversionRate || 0,
         promotionSpend: metrics.promotionSpend || 0,
@@ -709,12 +723,7 @@
     const categories = sortValuesByGmv(state.allRecords, "category");
     const brands = sortValuesByGmv(state.allRecords.filter((record) => record.brand), "brand");
     const regions = sortValuesByGmv(state.allRecords.filter((record) => record.region), "region");
-    let stores = sortValuesByGmv(state.allRecords.filter((record) => record.store), "store");
-    state.storeFilterUsesChannel = false;
-    if (!stores.length && state.allRecords.length) {
-      stores = sortValuesByGmv(state.allRecords, "channel");
-      state.storeFilterUsesChannel = true;
-    }
+    const stores = sortValuesByGmv(state.allRecords.filter((r) => r.store), "store");
     const dates = state.allRecords.map((record) => record.dateKey).sort();
 
     fillSelect(els.monthFilter, months, "全部月份", formatMonthLabel);
@@ -726,9 +735,9 @@
 
     const storeHint = document.getElementById("storeFilterHint");
     if (storeHint) {
-      storeHint.textContent = state.storeFilterUsesChannel
-        ? "当前数据无独立店铺列，选项与「渠道」一致，可在此多选店铺（经销商）"
-        : "可多选；默认「全部」";
+      storeHint.textContent = stores.length
+        ? "可多选；默认「全部」"
+        : "当前数据无店铺维度：请在数据源中提供「店铺」列，或重新运行 build_data.py 生成含店铺字段的数据包。";
     }
 
     els.brandFilterWrap.classList.toggle("hidden", !brands.length);
@@ -1170,8 +1179,8 @@
         if (channelSet && !channelSet.has(record.channel)) return false;
         if (categorySet && !categorySet.has(record.category || "未识别类目")) return false;
         if (storeSet) {
-          const storeKey = state.storeFilterUsesChannel ? record.channel : record.store || "";
-          if (!storeSet.has(storeKey)) return false;
+          const sk = record.store != null ? String(record.store).trim() : "";
+          if (!sk || !storeSet.has(sk)) return false;
         }
         if (brand !== "all" && record.brand !== brand) return false;
         if (regionSet && !regionSet.has(record.region)) return false;
@@ -3017,7 +3026,7 @@
       日期: record.dateKey,
       月份: record.monthKey,
       渠道: record.channel,
-      店铺: state.storeFilterUsesChannel ? record.channel : record.store || "",
+      店铺: record.store || "",
       产品大类: record.category,
       商品: record.product,
       商品编码: record.sku,
