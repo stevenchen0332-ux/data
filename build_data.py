@@ -31,7 +31,6 @@ ALIASES = {
     "day": ["日", "天"],
     "amount": ["GMV", "销售金额", "应收金额", "合计", "摊分支付金额", "货品原总金额"],
     "quantity": ["数量", "销售数量", "货品数量", "出货量"],
-    # store 必须在 channel 之前：detect_fields 按插入顺序匹配，子串命中时优先店铺维度
     "store": ["店铺", "店铺名称", "网店", "门店"],
     "channel": ["经销商", "渠道", "客户"],
     "product": ["产品名称", "商品名称", "品名", "SKU名称", "货品名称"],
@@ -68,17 +67,16 @@ def detect_fields(columns: list[str]) -> dict[str, str | None]:
         if not match:
             for col in columns:
                 norm_col = normalize_header(col)
-                if key == "channel":
-                    has_store_word = any(
-                        normalize_header(sa) in norm_col for sa in ALIASES["store"]
-                    )
-                    has_channel_word = any(
-                        normalize_header(alias) in norm_col for alias in aliases
-                    )
-                    if has_store_word and not has_channel_word:
+                for alias in sorted(aliases, key=lambda a: len(normalize_header(a)), reverse=True):
+                    an = normalize_header(alias)
+                    if not an or an not in norm_col:
                         continue
-                if any(normalize_header(alias) in norm_col for alias in aliases):
+                    # 避免「店铺」命中「店铺访客数」等列名
+                    if key == "store" and an == normalize_header("店铺") and "访客" in norm_col:
+                        continue
                     match = col
+                    break
+                if match:
                     break
         detected[key] = match
     return detected

@@ -3,9 +3,8 @@
 
   const FIELD_ALIASES = {
     date: ["订单日期", "发货时间", "出货日期", "日期", "日", "date", "orderdate", "shipdate"],
-    /** store 必须在 channel 之前：detectFields 按对象键顺序匹配，避免「门店」等词被渠道抢走 */
-    store: ["店铺", "店铺名称", "网店", "店铺名", "门店", "门店名称", "shop", "store name", "店铺编码"],
-    channel: ["经销商", "渠道", "客户"],
+    store: ["店铺", "店铺名称", "网店", "店铺名", "门店名称", "shop", "store name", "店铺编码"],
+    channel: ["经销商", "渠道", "门店", "客户"],
     product: ["商品名称", "品名", "货品名称", "SKU名称", "sku名称", "产品名称"],
     sku: ["商品编码", "货品编号", "SKU编号", "sku编号", "编码", "货号"],
     quantity: ["数量", "出货数量", "销售数量", "货品数量", "销量", "件数"],
@@ -417,9 +416,15 @@
     };
 
     applyReports([report]);
-    showToastLikeStatus(
-      `已加载本地数据包：${formatInteger(bundle.meta.rawRows)} 行原始数据，${formatInteger(bundle.meta.factRows)} 条经营事实`,
-    );
+    const baseMsg = `已加载本地数据包：${formatInteger(bundle.meta.rawRows)} 行原始数据，${formatInteger(bundle.meta.factRows)} 条经营事实`;
+    if (!hasStoreDim) {
+      showToastLikeStatus(
+        `${baseMsg}。提示：当前包无店铺维度（缺少 dims.stores），店铺筛选仅「全部」。请在本机运行 build_data.py 用含「店铺」列的源表重新生成 data-bundle.js，替换站点同目录文件后强刷（可改 index 里 data-bundle.js 的 ?v=）。`,
+        true,
+      );
+    } else {
+      showToastLikeStatus(baseMsg);
+    }
   }
 
   function applyReports(reports) {
@@ -551,7 +556,7 @@
     const rows = Array.isArray(result.data) ? result.data : [];
     const headers = (result.meta.fields || []).filter(Boolean);
     const fields = detectFields(headers);
-    ensureChannelColumnWhenMissing(fields, headers);
+    ensureChannelColumnWhenMissing(fields);
     const missing = REQUIRED_FIELDS.filter((field) => !fields[field]);
     const parsedRows = [];
     let invalidRows = 0;
@@ -573,21 +578,10 @@
     };
   }
 
-  /**
-   * 仅当缺少渠道列、且表头中不存在「疑似渠道」列时，才用店铺列回填 channel（用于仅有店铺维度的出货表）。
-   * 若已有「经销商」等列但 detect 未映射成功，禁止把 channel 绑到店铺列，避免与 record.store 混淆。
-   */
-  function ensureChannelColumnWhenMissing(fields, headers) {
-    if (fields.channel || !fields.store) return;
-    const headerList = Array.isArray(headers) ? headers : [];
-    const storeNorm = normalizeHeader(fields.store);
-    const dealerLike = headerList.some((h) => {
-      const n = normalizeHeader(h);
-      if (!n || n === storeNorm) return false;
-      return /(经销商|渠道|客户|分销|dealer|channel)/i.test(n);
-    });
-    if (dealerLike) return;
-    fields.channel = fields.store;
+  function ensureChannelColumnWhenMissing(fields) {
+    if (!fields.channel && fields.store) {
+      fields.channel = fields.store;
+    }
   }
 
   function parseCsvFile(file) {
@@ -601,7 +595,7 @@
           const rows = Array.isArray(result.data) ? result.data : [];
           const headers = (result.meta.fields || []).filter(Boolean);
           const fields = detectFields(headers);
-          ensureChannelColumnWhenMissing(fields, headers);
+          ensureChannelColumnWhenMissing(fields);
           const missing = REQUIRED_FIELDS.filter((field) => !fields[field]);
           const parsedRows = [];
           let invalidRows = 0;
@@ -662,7 +656,7 @@
     if (group === "quantity") return !/(日期|时间|date|time)/i.test(normalizedHeader);
     if (group === "amount") return !/(数量|件数|qty|quantity)/i.test(normalizedHeader);
     if (group === "sku") return !/(名称|name)/i.test(normalizedHeader);
-    if (group === "channel") return !/(店铺|网店|shop|store)/i.test(normalizedHeader);
+    if (group === "store") return !/(访客|uv|流量)/i.test(normalizedHeader);
     return true;
   }
 
@@ -670,9 +664,7 @@
     const text = normalizedHeader;
     const matchers = {
       date: () => /(日期|时间|date|time|day)/i.test(text),
-      channel: () =>
-        /(经销商|渠道|客户|分销|channel|dealer)/i.test(text) &&
-        !/(店铺|网店|shop|store)/i.test(text),
+      channel: () => /(经销商|渠道|门店|客户|分销|channel|dealer)/i.test(text),
       product: () => /(商品|品名|货品|产品|sku名称|productname|itemname)/i.test(text) && !/(编码|编号|code|id)/i.test(text),
       sku: () => /(商品编码|货品编号|sku编号|sku|编码|编号|code)/i.test(text) && !/(名称|name)/i.test(text),
       quantity: () => /(数量|销量|件数|出货量|qty|quantity|volume)/i.test(text) && !/(日期|时间|date|time)/i.test(text),
@@ -683,7 +675,7 @@
       category: () =>
         /(产品大类|类目|品类|商品类目|category)/i.test(text) && !/(商品名称|品名|货品名称|编码)/i.test(text),
       store: () =>
-        /(店铺|网店|门店|shop|store)/i.test(text) &&
+        /(店铺|网店|shop|store)/i.test(text) &&
         !/(商品|品名|货品|产品|渠道|经销商|金额|数量|编码|日期)/i.test(text),
     };
     return matchers[group] ? matchers[group]() : false;
