@@ -63,8 +63,8 @@
         <section id="uploadPanel" class="upload-panel publish-hidden">
           <div id="dropZone" class="drop-zone">
             <div>
-              <p class="upload-title">已内置发布数据包</p>
-              <p class="upload-copy">页面加载同目录 <strong>data-bundle.js</strong>，不依赖后端，也不读取访问者本机文件。</p>
+              <p class="upload-title">数据接入方式</p>
+              <p class="upload-copy">发布站点会优先加载同目录下的 <strong>data-bundle.js</strong>（由 <strong>build_data.py</strong> 从本地 CSV/Excel 生成）。若无数据包，可将 CSV 放在站点根目录或 <strong>data/</strong> 子目录，并在 <strong>csv-manifest.json</strong> 中列出相对路径；也可直接拖拽上传 CSV。编码请选择 UTF-8 或 GBK。</p>
             </div>
             <div class="upload-controls">
               <label class="select-label" for="encodingSelect">编码</label>
@@ -105,6 +105,12 @@
             <label for="channelFilter">渠道</label>
             <select id="channelFilter" disabled>
               <option value="all">全部渠道</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="categoryFilter">产品大类</label>
+            <select id="categoryFilter" disabled>
+              <option value="all">全部大类</option>
             </select>
           </div>
           <div class="filter-field optional-filter hidden" id="brandFilterWrap">
@@ -206,57 +212,6 @@
               </article>
             </div>
 
-            <section class="traffic-band" aria-label="流量与推广经营视角">
-              <div class="card-title compact-title">
-                <h4>流量与推广口径</h4>
-                <span>结合本地流量 Excel，和出货口径交叉判断趋势</span>
-              </div>
-              <div class="traffic-metric-grid">
-                <div class="traffic-metric">
-                  <span>流量 GMV</span>
-                  <strong id="trafficGmv">-</strong>
-                  <small id="trafficGmvSub">-</small>
-                </div>
-                <div class="traffic-metric">
-                  <span>访客数</span>
-                  <strong id="trafficVisitors">-</strong>
-                  <small id="trafficVisitorsSub">-</small>
-                </div>
-                <div class="traffic-metric">
-                  <span>转化率</span>
-                  <strong id="trafficCvr">-</strong>
-                  <small id="trafficCvrSub">-</small>
-                </div>
-                <div class="traffic-metric">
-                  <span>推广花费</span>
-                  <strong id="trafficSpend">-</strong>
-                  <small id="trafficSpendSub">-</small>
-                </div>
-                <div class="traffic-metric">
-                  <span>推广 ROI</span>
-                  <strong id="trafficRoi">-</strong>
-                  <small id="trafficRoiSub">-</small>
-                </div>
-              </div>
-              <div class="chart-grid two-col">
-                <article class="chart-card">
-                  <div class="card-title">
-                    <h4>出货 GMV vs 流量 GMV</h4>
-                    <span>趋势应同向，但口径允许存在差异</span>
-                  </div>
-                  <div id="trafficTrendChart" class="chart"></div>
-                </article>
-                <article class="chart-card">
-                  <div class="card-title">
-                    <h4>推广花费与 ROI</h4>
-                    <span>判断投放效率变化</span>
-                  </div>
-                  <div id="trafficPromotionChart" class="chart"></div>
-                </article>
-              </div>
-              <ul id="trafficInsights" class="insight-list traffic-insights"></ul>
-            </section>
-
             <div class="overview-story-grid">
               <article class="chart-card overview-rank-card">
                 <div class="card-title compact-title">
@@ -316,6 +271,13 @@
                   <span id="monthTrendLabel">-</span>
                 </div>
                 <div id="monthlyCumulativeChart" class="chart"></div>
+              </article>
+              <article class="chart-card wide-card">
+                <div class="card-title">
+                  <h4>未来 7 日 GMV 预估</h4>
+                  <span id="forecastSummary">基于历史出货趋势估算</span>
+                </div>
+                <div id="forecastTrendChart" class="chart"></div>
               </article>
             </div>
 
@@ -446,6 +408,20 @@
             <div class="chart-grid two-col">
               <article class="chart-card">
                 <div class="card-title">
+                  <h4>产品大类 GMV</h4>
+                  <span>点击大类可联动筛选</span>
+                </div>
+                <div id="categoryGmvChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>产品大类增长贡献</h4>
+                  <span>当前周期 vs 对比周期</span>
+                </div>
+                <div id="categoryContributionChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
                   <h4>TOP 商品 GMV</h4>
                   <span>点击商品可联动筛选</span>
                 </div>
@@ -485,6 +461,7 @@
                     <tr>
                       <th>商品</th>
                       <th>编码</th>
+                      <th>产品大类</th>
                       <th>分类</th>
                       <th>GMV</th>
                       <th>出货数量</th>
@@ -600,6 +577,11 @@
     </div>
 
     <script src="./echarts.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"
+      crossorigin="anonymous"
+      onerror="this.onerror=null;this.src='./papaparse.min.js'"
+    ></script>
     <script src="./data-bundle.js"></script>
     <script src="./script.js"></script>
   </body>

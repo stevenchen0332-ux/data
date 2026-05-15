@@ -370,7 +370,7 @@ input:disabled {
   top: 0;
   z-index: 5;
   display: grid;
-  grid-template-columns: repeat(9, minmax(130px, 1fr));
+  grid-template-columns: repeat(10, minmax(125px, 1fr));
   gap: 12px;
   padding: 14px;
   margin-bottom: 14px;
@@ -549,51 +549,6 @@ input:disabled {
   flex: 0 0 34px;
 }
 
-.traffic-band {
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #fbfcfe;
-}
-
-.traffic-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.traffic-metric {
-  min-height: 104px;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.traffic-metric span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.traffic-metric strong {
-  font-size: clamp(20px, 1.7vw, 28px);
-  line-height: 1.15;
-}
-
-.traffic-metric small {
-  color: var(--muted);
-  line-height: 1.45;
-}
-
-.traffic-insights {
-  margin-top: 12px;
-}
-
 .positive {
   color: var(--positive) !important;
 }
@@ -613,6 +568,10 @@ input:disabled {
 
 .two-col {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wide-card {
+  grid-column: 1 / -1;
 }
 
 .chart-card,
@@ -884,10 +843,6 @@ td {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .traffic-metric-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .overview-story-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -936,7 +891,6 @@ td {
   .two-col,
   .summary-grid,
   .overview-story-grid,
-  .traffic-metric-grid,
   .opportunity-grid {
     grid-template-columns: 1fr;
   }
