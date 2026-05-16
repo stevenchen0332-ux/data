@@ -1,939 +1,834 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>太太乐天猫旗舰店销售与投放追踪看板</title>
-  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-  <style>
-    :root {
-      --bg: #f7f3ef;
-      --panel: #fffaf6;
-      --card: #ffffff;
-      --ink: #201915;
-      --muted: #7a6b61;
-      --line: #eaded5;
-      --red: #c93426;
-      --orange: #ef7d2d;
-      --amber: #f5b84b;
-      --green: #2f9b73;
-      --blue: #3f80c2;
-      --shadow: 0 18px 45px rgba(103, 55, 32, 0.11);
-      --radius: 18px;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      color: var(--ink);
-      background:
-        linear-gradient(135deg, rgba(201, 52, 38, 0.09), transparent 30%),
-        linear-gradient(180deg, #fff9f3 0%, var(--bg) 34%, #f8f4f0 100%);
-    }
-
-    .page {
-      width: min(1480px, calc(100% - 48px));
-      margin: 0 auto;
-      padding: 34px 0 42px;
-    }
-
-    .hero {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 22px;
-      align-items: end;
-      padding: 28px 30px;
-      border: 1px solid rgba(201, 52, 38, 0.13);
-      border-radius: 24px;
-      background: linear-gradient(120deg, rgba(255, 255, 255, 0.92), rgba(255, 244, 235, 0.92));
-      box-shadow: var(--shadow);
-    }
-
-    h1 {
-      margin: 0 0 12px;
-      font-size: clamp(28px, 4vw, 48px);
-      line-height: 1.12;
-      letter-spacing: 0;
-    }
-
-    .hero p {
-      margin: 0;
-      max-width: 920px;
-      color: var(--muted);
-      font-size: 15px;
-      line-height: 1.7;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 12px;
-      border-radius: 999px;
-      color: #7a2118;
-      background: rgba(201, 52, 38, 0.09);
-      font-size: 13px;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-
-    .analysis-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-top: 18px;
-      padding: 16px 18px;
-      border: 1px solid rgba(201, 52, 38, 0.14);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.78);
-      box-shadow: 0 10px 28px rgba(96, 50, 25, 0.07);
-    }
-
-    .analysis-toolbar label {
-      display: grid;
-      gap: 4px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .analysis-toolbar strong {
-      color: var(--ink);
-      font-size: 15px;
-    }
-
-    select {
-      min-width: 230px;
-      height: 42px;
-      padding: 0 40px 0 14px;
-      border: 1px solid #e6d7cd;
-      border-radius: 12px;
-      color: var(--ink);
-      background: #fff;
-      font: inherit;
-      font-weight: 750;
-      outline: none;
-    }
-
-    .kpis {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 16px;
-      margin-top: 18px;
-    }
-
-    .kpi {
-      min-height: 132px;
-      padding: 20px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: rgba(255, 255, 255, 0.86);
-      box-shadow: 0 10px 28px rgba(96, 50, 25, 0.08);
-    }
-
-    .kpi .label {
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 700;
-    }
-
-    .kpi .value {
-      margin-top: 10px;
-      font-size: clamp(26px, 3.1vw, 38px);
-      line-height: 1;
-      font-weight: 850;
-      letter-spacing: 0;
-    }
-
-    .kpi .note {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-
-    .kpi.primary {
-      color: #fff;
-      border: none;
-      background: linear-gradient(135deg, var(--red), var(--orange));
-    }
-
-    .kpi.primary .label,
-    .kpi.primary .note { color: rgba(255, 255, 255, 0.82); }
-
-    .section {
-      margin-top: 18px;
-      padding: 22px;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: rgba(255, 250, 246, 0.84);
-      box-shadow: var(--shadow);
-    }
-
-    .section-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 14px;
-    }
-
-    .section h2 {
-      margin: 0;
-      font-size: 22px;
-      letter-spacing: 0;
-    }
-
-    .section .sub {
-      margin: 6px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.6;
-    }
-
-    .grid-2 {
-      display: grid;
-      grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.8fr);
-      gap: 16px;
-    }
-
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 16px;
-    }
-
-    .chart-card,
-    .mini-card {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--card);
-      box-shadow: 0 12px 32px rgba(96, 50, 25, 0.07);
-    }
-
-    .chart-card {
-      padding: 16px 16px 10px;
-    }
-
-    .chart-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 8px;
-      color: #3a2b23;
-      font-size: 14px;
-      font-weight: 800;
-    }
-
-    .chart {
-      width: 100%;
-      height: 360px;
-    }
-
-    .chart.sm { height: 315px; }
-    .chart.tall { height: 430px; }
-
-    .mini-card {
-      padding: 18px;
-    }
-
-    .mini-grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .compare-card {
-      padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: #fff;
-      box-shadow: 0 10px 24px rgba(96, 50, 25, 0.06);
-    }
-
-    .compare-card .label {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 750;
-    }
-
-    .compare-card .value {
-      margin-top: 8px;
-      font-size: 24px;
-      line-height: 1;
-      font-weight: 850;
-    }
-
-    .compare-card .delta {
-      margin-top: 8px;
-      color: var(--green);
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .compare-card .delta.down { color: var(--red); }
-
-    .mini-card h3 {
-      margin: 0 0 12px;
-      font-size: 15px;
-    }
-
-    .metric-row {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      padding: 13px 0;
-      border-top: 1px solid #f0e7df;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .metric-row:first-of-type { border-top: none; }
-
-    .metric-row b {
-      color: var(--ink);
-      font-size: 16px;
-    }
-
-    .judgement {
-      margin-top: 12px;
-      padding: 14px;
-      border-radius: 14px;
-      color: #6f2a18;
-      background: rgba(239, 125, 45, 0.11);
-      font-size: 13px;
-      line-height: 1.7;
-    }
-
-    .insights {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 8px;
-    }
-
-    .insight {
-      display: grid;
-      grid-template-columns: 28px 1fr;
-      gap: 12px;
-      align-items: start;
-      padding: 16px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: #fff;
-      color: #4d3c33;
-      line-height: 1.65;
-      font-size: 14px;
-    }
-
-    .insight span {
-      display: grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: rgba(201, 52, 38, 0.1);
-      color: var(--red);
-      font-weight: 850;
-    }
-
-    footer {
-      margin: 20px 4px 0;
-      color: var(--muted);
-      font-size: 12px;
-      text-align: center;
-    }
-
-    @media (max-width: 1100px) {
-      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
-      .chart { height: 340px; }
-    }
-
-    @media (max-width: 720px) {
-      .page { width: min(100% - 24px, 1480px); padding-top: 18px; }
-      .hero { grid-template-columns: 1fr; padding: 22px; }
-      .analysis-toolbar { display: block; }
-      select { width: 100%; margin-top: 12px; }
-      .kpis { grid-template-columns: 1fr; }
-      .mini-grid { grid-template-columns: 1fr; }
-      .section { padding: 16px; }
-      .section-head { display: block; }
-      .insights { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  <main class="page">
-    <section class="hero">
-      <div>
-        <h1>太太乐天猫旗舰店销售与投放追踪看板</h1>
-        <p>围绕 GMV、流量、客户结构与投放效率复盘 FY24-FY26 月度经营表现。FY26 按工作表已有月份展示，YTD 不与完整年度直接同比。</p>
-      </div>
-      <div class="badge">截至 2026 年 4 月文件 · FY26 已有 1-4 月数据</div>
-    </section>
-
-    <section class="analysis-toolbar">
-      <label>
-        <strong>分析口径</strong>
-        选择后下方专项模块会切换到对应分析口径
-      </label>
-      <select id="analysisYear" aria-label="选择分析口径">
-        <option value="FY26_YTD" selected>FY26 1-4 月 vs FY25 1-4 月</option>
-        <option value="FY25_FULL">FY25 全年 vs FY24 全年</option>
-      </select>
-    </section>
-
-    <section class="kpis" id="kpis"></section>
-
-    <section class="section" id="q1Section">
-      <div class="section-head">
-        <div>
-          <h2 id="q1Title">FY26 1-4 月与 FY25 1-4 月对比</h2>
-          <p class="sub" id="q1Sub">按 1-4 月同周期比较 FY26 表现，避免用 FY26 YTD 与 FY25 全年直接对比。</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>太太乐全渠道经营驾驶舱</title>
+    <link rel="stylesheet" href="./style.css?v=20260516f" />
+    <link rel="stylesheet" href="./ttl-traffic.css?v=20260516f" />
+    <link rel="stylesheet" href="./cockpit-layout.css?v=20260516f" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="side-nav" aria-label="驾驶舱导航">
+        <div class="brand-block">
+          <div class="brand-mark">D</div>
+          <div>
+            <p class="eyebrow">Channel Daily Shipment</p>
+            <h1>太太乐驾驶舱</h1>
+          </div>
         </div>
-      </div>
-      <div class="mini-grid" id="q1Cards"></div>
-      <div class="grid-3">
-        <div class="chart-card">
-          <div class="chart-title">核心指标指数化对比 <small id="q1CoreNote">FY25 1-4 月 = 100</small></div>
-          <div class="chart sm" id="q1Core"></div>
+
+        <nav class="module-nav">
+          <button class="nav-item active" data-module="overview" type="button">
+            <span class="nav-icon">01</span>
+            <span>经营总览</span>
+          </button>
+          <button class="nav-item" data-module="channel" type="button">
+            <span class="nav-icon">02</span>
+            <span>渠道归因</span>
+          </button>
+          <button class="nav-item" data-module="product" type="button">
+            <span class="nav-icon">03</span>
+            <span>商品经营</span>
+          </button>
+          <button class="nav-item" data-module="anomaly" type="button">
+            <span class="nav-icon">04</span>
+            <span>异常监控</span>
+          </button>
+          <button class="nav-item" data-module="traffic" type="button">
+            <span class="nav-icon">05</span>
+            <span>流量与转化</span>
+          </button>
+          <button class="nav-item" data-module="recommendation" type="button">
+            <span class="nav-icon">06</span>
+            <span>经营建议</span>
+          </button>
+        </nav>
+
+        <div class="side-note">
+          <span class="status-dot"></span>
+          <span id="dataHealthText">正在加载发布数据</span>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">GMV 来源对比 <small>单位：万元</small></div>
-          <div class="chart sm" id="q1Source"></div>
+      </aside>
+
+      <main class="main-content">
+        <header class="top-bar">
+          <div>
+            <p class="eyebrow">发布版静态经营看板</p>
+            <h2>太太乐全渠道经营驾驶舱</h2>
+            <p id="cockpitUpdatedAt" class="cockpit-updated">数据更新时间：—</p>
+          </div>
+          <div class="header-actions">
+            <input id="csvInput" class="publish-hidden" type="file" accept=".csv,text/csv" multiple />
+            <button id="reloadDataBtn" class="icon-button publish-hidden" type="button">刷新数据</button>
+            <button id="exportBtn" class="primary-button" type="button" disabled>导出明细</button>
+          </div>
+        </header>
+
+        <section id="uploadPanel" class="upload-panel publish-hidden">
+          <div id="dropZone" class="drop-zone">
+            <div>
+              <p class="upload-title">数据接入方式</p>
+              <p class="upload-copy">发布站点会优先加载同目录下的 <strong>data-bundle.js</strong>（由 <strong>build_data.py</strong> 从本地 CSV/Excel 生成）。若无数据包，可将 CSV 放在站点根目录或 <strong>data/</strong> 子目录，并在 <strong>csv-manifest.json</strong> 中列出相对路径；也可直接拖拽上传 CSV。编码请选择 UTF-8 或 GBK。</p>
+            </div>
+            <div class="upload-controls">
+              <label class="select-label" for="encodingSelect">编码</label>
+              <select id="encodingSelect">
+                <option value="UTF-8">UTF-8</option>
+                <option value="GBK">GBK / Excel 中文 CSV</option>
+              </select>
+              <button id="reloadDataPanelBtn" class="secondary-button" type="button">刷新数据</button>
+            </div>
+          </div>
+          <div id="fieldStatus" class="field-status hidden"></div>
+        </section>
+
+        <section class="filter-bar cockpit-filter-bar" aria-label="全局筛选">
+          <div class="cockpit-filter-row-main">
+            <div class="filter-field cockpit-filter-compact">
+              <label for="monthFilter">月份</label>
+              <select id="monthFilter" disabled>
+                <option value="all">全部月份</option>
+              </select>
+            </div>
+            <div class="filter-field cockpit-filter-compact">
+              <label for="startDateFilter">开始日期</label>
+              <input id="startDateFilter" type="date" disabled />
+            </div>
+            <div class="filter-field cockpit-filter-compact">
+              <label for="endDateFilter">结束日期</label>
+              <input id="endDateFilter" type="date" disabled />
+            </div>
+            <div class="cockpit-compare-inline" aria-label="对比周期">
+              <span class="cockpit-compare-label">对比期</span>
+              <div class="filter-field cockpit-filter-compact">
+                <label for="compareStartDateFilter">对比始</label>
+                <input id="compareStartDateFilter" type="date" disabled />
+              </div>
+              <div class="filter-field cockpit-filter-compact">
+                <label for="compareEndDateFilter">对比末</label>
+                <input id="compareEndDateFilter" type="date" disabled />
+              </div>
+            </div>
+            <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact">
+              <label for="channelFilterTrigger">渠道</label>
+              <div class="multi-dropdown-root">
+                <select id="channelFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="channelFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="channelFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部渠道</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="channelFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+          </div>
+          <div class="cockpit-filter-row-dims">
+            <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact">
+              <label for="categoryFilterTrigger">品类</label>
+              <div class="multi-dropdown-root">
+                <select id="categoryFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="categoryFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="categoryFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部大类</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="categoryFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+            <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact" id="storeFilterWrap">
+              <label for="storeFilterTrigger">店铺</label>
+              <div class="multi-dropdown-root">
+                <select id="storeFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="storeFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="storeFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部店铺</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="storeFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+            <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact optional-filter hidden" id="regionFilterWrap">
+              <label for="regionFilterTrigger">区域</label>
+              <div class="multi-dropdown-root">
+                <select id="regionFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="regionFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="regionFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部地区</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="regionFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+            <div class="filter-field search-field filter-field-search-inline cockpit-filter-search">
+              <label for="productSearch">商品搜索</label>
+              <input id="productSearch" type="search" placeholder="商品名或编码" disabled />
+            </div>
+            <div class="cockpit-filter-actions">
+              <button id="resetFiltersBtn" class="ghost-button" type="button">重置</button>
+              <button id="cockpitApplyFiltersBtn" type="button" class="primary-button">查询</button>
+            </div>
+            <div class="filter-field optional-filter hidden cockpit-filter-brand" id="brandFilterWrap">
+              <label for="brandFilter">品牌</label>
+              <select id="brandFilter" disabled>
+                <option value="all">全部品牌</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="meta-strip">
+          <div>
+            <span class="meta-label">数据范围</span>
+            <strong id="dateRangeText">-</strong>
+          </div>
+          <div>
+            <span class="meta-label">已合并记录</span>
+            <strong id="recordCountText">0</strong>
+          </div>
+          <div>
+            <span class="meta-label">当前筛选</span>
+            <strong id="filteredCountText">0</strong>
+          </div>
+          <div>
+            <span class="meta-label">数据文件</span>
+            <strong id="fileCountText">0</strong>
+          </div>
+        </section>
+
+        <section id="emptyState" class="empty-state">
+          <h3>等待数据</h3>
+          <p>发布数据加载后将自动生成经营总览、渠道归因、商品分层、异常识别和 3 个当前最需要关注的问题。</p>
+        </section>
+
+        <div id="dashboardContent" class="dashboard-content hidden">
+          <nav class="story-nav" aria-label="故事分段导航">
+            <button class="nav-item story-tab active" data-module="overview" type="button">经营总览</button>
+            <button class="nav-item story-tab" data-module="channel" type="button">渠道归因</button>
+            <button class="nav-item story-tab" data-module="product" type="button">商品经营</button>
+            <button class="nav-item story-tab" data-module="anomaly" type="button">异常监控</button>
+            <button class="nav-item story-tab" data-module="traffic" type="button">流量与转化</button>
+            <button class="nav-item story-tab" data-module="recommendation" type="button">经营建议</button>
+          </nav>
+
+          <section id="overview" class="module-section active">
+            <div class="cockpit-executive" id="cockpitExecutive" aria-label="经营驾驶舱首屏">
+              <div class="cockpit-exec-kpis">
+                <article class="cockpit-exec-card cockpit-exec-card--accent">
+                  <span class="cockpit-exec-label">出货件数（Shipment）</span>
+                  <strong id="execV0" class="cockpit-exec-value">-</strong>
+                  <div id="execS0" class="cockpit-exec-sub">当前筛选周期</div>
+                  <div id="execT0" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card cockpit-exec-card--accent">
+                  <span class="cockpit-exec-label">GMV</span>
+                  <strong id="execV1" class="cockpit-exec-value">-</strong>
+                  <div id="execS1" class="cockpit-exec-sub">出货口径金额</div>
+                  <div id="execT1" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">日均出货</span>
+                  <strong id="execV2" class="cockpit-exec-value">-</strong>
+                  <div id="execS2" class="cockpit-exec-sub">件 / 有数据日</div>
+                  <div id="execT2" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">出货同比（对比期）</span>
+                  <strong id="execV3" class="cockpit-exec-value">-</strong>
+                  <div id="execS3" class="cockpit-exec-sub">件数 vs 对比周期</div>
+                  <div id="execT3" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">GMV 环比</span>
+                  <strong id="execV4" class="cockpit-exec-value">-</strong>
+                  <div id="execS4" class="cockpit-exec-sub">对上一对比窗口</div>
+                  <div id="execT4" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">客单价（AOV）</span>
+                  <strong id="execV5" class="cockpit-exec-value">-</strong>
+                  <div id="execS5" class="cockpit-exec-sub">GMV ÷ 出货件数</div>
+                  <div id="execT5" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">广告费率</span>
+                  <strong id="execV6" class="cockpit-exec-value">-</strong>
+                  <div id="execS6" class="cockpit-exec-sub">推广费 / GMV</div>
+                  <div id="execT6" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">ROI</span>
+                  <strong id="execV7" class="cockpit-exec-value">-</strong>
+                  <div id="execS7" class="cockpit-exec-sub">GMV / 推广费</div>
+                  <div id="execT7" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+
+              </div>
+
+              <div class="cockpit-exec-trends">
+                <article class="cockpit-exec-trend-card">
+                  <h4>出货趋势（近 30 日）</h4>
+                  <p class="cockpit-exec-trend-hint">实线本期 · 虚线对比期（按日历对齐）</p>
+                  <div id="execTrendShipment" class="cockpit-exec-chart"></div>
+                </article>
+                <article class="cockpit-exec-trend-card">
+                  <h4>GMV 趋势（近 30 日）</h4>
+                  <p class="cockpit-exec-trend-hint">支持对比周期参考线</p>
+                  <div id="execTrendGmv" class="cockpit-exec-chart"></div>
+                </article>
+                <article class="cockpit-exec-trend-card">
+                  <h4>流量趋势（UV）</h4>
+                  <p class="cockpit-exec-trend-hint">来自流量日表；UV=0 当日不画点</p>
+                  <div id="execTrendUv" class="cockpit-exec-chart"></div>
+                </article>
+                <article class="cockpit-exec-trend-card">
+                  <h4>转化率趋势</h4>
+                  <p class="cockpit-exec-trend-hint">出货件数 ÷ UV（按日）</p>
+                  <div id="execTrendCvr" class="cockpit-exec-chart"></div>
+                </article>
+              </div>
+
+              <div class="cockpit-exec-diagnosis">
+                <h4>经营诊断（本周期 vs 对比期）</h4>
+                <ul id="execDiagnosisList"></ul>
+                <p class="cockpit-exec-formula">
+                  GMV 变化可近似分解为：流量（UV）× 转化率（CVR）× 客单价（AOV）；下列 3 条为规则引擎结论，用于快速定位问题域。
+                </p>
+              </div>
+            </div>
+
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Overview</p>
+                <h3>经营总览</h3>
+              </div>
+              <p id="overviewConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="overview-story-grid">
+              <article class="chart-card overview-rank-card">
+                <div class="card-title compact-title">
+                  <h4>渠道表现</h4>
+                  <span>GMV 排名</span>
+                </div>
+                <div id="overviewChannelRankChart" class="chart story-side-chart"></div>
+              </article>
+              <article class="chart-card overview-main-card">
+                <div class="card-title compact-title">
+                  <h4>经销商日表现</h4>
+                  <span>按日堆叠 GMV</span>
+                </div>
+                <div id="channelDailyStackChart" class="chart story-main-chart"></div>
+              </article>
+              <article class="chart-card overview-rank-card">
+                <div class="card-title compact-title">
+                  <h4>单品表现</h4>
+                  <span>TOP 商品</span>
+                </div>
+                <div id="overviewProductRankChart" class="chart story-side-chart"></div>
+              </article>
+              <article class="chart-card concentration-card">
+                <div class="card-title compact-title">
+                  <h4>订单金额集中度</h4>
+                  <span>按订单或明细金额分桶</span>
+                </div>
+                <div id="orderAmountBucketChart" class="chart story-mini-chart"></div>
+              </article>
+              <article class="chart-card concentration-card">
+                <div class="card-title compact-title">
+                  <h4>商品 GMV 集中度</h4>
+                  <span>TOP 商品占比</span>
+                </div>
+                <div id="productShareDonutChart" class="chart story-mini-chart"></div>
+              </article>
+              <article class="chart-card price-trend-card">
+                <div class="card-title compact-title">
+                  <h4>价格和销售趋势</h4>
+                  <span>GMV × 平均单价</span>
+                </div>
+                <div id="priceSalesTrendChart" class="chart story-mini-chart"></div>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>最近 7 日 GMV 趋势</h4>
+                  <span>点击日期可联动筛选</span>
+                </div>
+                <div id="recentTrendChart" class="chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>月累计 GMV 趋势</h4>
+                  <span id="monthTrendLabel">-</span>
+                </div>
+                <div id="monthlyCumulativeChart" class="chart"></div>
+              </article>
+              <article class="chart-card wide-card">
+                <div class="card-title">
+                  <h4>未来 7 日 GMV 预估</h4>
+                  <span id="forecastSummary">基于历史出货趋势估算</span>
+                </div>
+                <div id="forecastTrendChart" class="chart"></div>
+              </article>
+            </div>
+
+            <article class="insight-card">
+              <h4>自动经营结论</h4>
+              <ul id="overviewInsights" class="insight-list"></ul>
+            </article>
+
+                        <div id="ttlTrafficAnalysisPanel" class="ttl-traffic ttl-traffic--root" aria-label="流量转化经营分析">
+              <div class="ttl-traffic__head">
+                <div>
+                  <h3 class="ttl-traffic__title">流量转化经营分析</h3>
+                  <p class="ttl-traffic__sub">
+                    与本页经营总览 KPI 及出货图表同筛选上下文；GMV 分解 GMV ≈ UV × CVR × AOV（口径随数据完整度变化）。
+                  </p>
+                </div>
+                <span id="ttlTrafficDataBadge" class="ttl-traffic__badge ttl-traffic__badge--stub">数据加载中</span>
+              </div>
+
+              <div class="ttl-traffic__kpi-grid" aria-label="流量转化 KPI">
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">GMV</span>
+                  <strong id="ttlTrafficKpiGmv" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiGmvSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">Net GMV</span>
+                  <strong id="ttlTrafficKpiNetGmv" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiNetGmvSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">UV</span>
+                  <strong id="ttlTrafficKpiUv" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiUvSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">CVR</span>
+                  <strong id="ttlTrafficKpiCvr" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiCvrSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">AOV</span>
+                  <strong id="ttlTrafficKpiAov" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiAovSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">推广费用</span>
+                  <strong id="ttlTrafficKpiPromo" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiPromoSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+                <div class="ttl-traffic__kpi-card">
+                  <span class="ttl-traffic__kpi-label">ROI</span>
+                  <strong id="ttlTrafficKpiRoi" class="ttl-traffic__kpi-value">-</strong>
+                  <div id="ttlTrafficKpiRoiSub" class="ttl-traffic__kpi-meta"></div>
+                </div>
+</div>
+              </div>
+
+              <div class="ttl-traffic__grid-2">
+                <div class="ttl-traffic__chart-card">
+                  <div class="ttl-traffic__chart-title">
+                    <h4>GMV 拆解趋势</h4>
+                    <span>UV / CVR(%) / AOV / GMV（近 45 日）</span>
+                  </div>
+                  <div id="ttlTrafficBridgeChart" class="ttl-traffic__chart ttl-traffic__chart--tall"></div>
+                </div>
+                <div class="ttl-traffic__chart-card">
+                  <div class="ttl-traffic__chart-title">
+                    <h4>出货 × GMV 日趋势</h4>
+                    <span>左轴出货数量 · 右轴 GMV（随渠道/店铺筛选联动）</span>
+                  </div>
+                  <div id="ttlTrafficDualAxisChart" class="ttl-traffic__chart ttl-traffic__chart--tall"></div>
+                </div>
+              </div>
+              <div class="ttl-traffic__diag">
+                <h4>自动经营诊断</h4>
+                <ul id="ttlTrafficDiagList"></ul>
+              </div>
+            </div>
+          </section>
+
+          <section id="channel" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Channel Attribution</p>
+                <h3>渠道表现</h3>
+              </div>
+              <p id="channelConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="summary-grid">
+              <article class="summary-card">
+                <span>贡献最大渠道</span>
+                <strong id="topChannelName">-</strong>
+                <small id="topChannelDesc">-</small>
+              </article>
+              <article class="summary-card">
+                <span>增长最快渠道</span>
+                <strong id="fastChannelName">-</strong>
+                <small id="fastChannelDesc">-</small>
+              </article>
+              <article class="summary-card danger">
+                <span>拖累最大渠道</span>
+                <strong id="dragChannelName">-</strong>
+                <small id="dragChannelDesc">-</small>
+              </article>
+              <article class="summary-card">
+                <span>渠道集中度</span>
+                <strong id="channelConcentration">-</strong>
+                <small id="channelConcentrationDesc">-</small>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>各渠道 GMV 排名</h4>
+                  <span>点击渠道可联动筛选</span>
+                </div>
+                <div id="channelGmvChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>各渠道出货数量排名</h4>
+                  <span>按当前筛选范围计算</span>
+                </div>
+                <div id="channelQtyChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>各渠道增长率</h4>
+                  <span>基于当前周期与对比周期</span>
+                </div>
+                <div id="channelGrowthChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>各渠道增长贡献</h4>
+                  <span>GMV 增量 / 减量</span>
+                </div>
+                <div id="channelContributionChart" class="chart tall-chart"></div>
+              </article>
+            </div>
+
+            <article class="table-card">
+              <div class="card-title">
+                <h4>渠道经营明细</h4>
+                <span id="channelTableNote">-</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>渠道</th>
+                      <th>GMV</th>
+                      <th>出货数量</th>
+                      <th>GMV 占比</th>
+                      <th>环比</th>
+                      <th>增长贡献</th>
+                    </tr>
+                  </thead>
+                  <tbody id="channelTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <section id="product" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Product Portfolio</p>
+                <h3>商品表现</h3>
+              </div>
+              <p id="productConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="summary-grid">
+              <article class="summary-card">
+                <span>核心爆品</span>
+                <strong id="heroProductCount">-</strong>
+                <small id="heroProductDesc">-</small>
+              </article>
+              <article class="summary-card">
+                <span>增长潜力品</span>
+                <strong id="potentialProductCount">-</strong>
+                <small id="potentialProductDesc">-</small>
+              </article>
+              <article class="summary-card danger">
+                <span>下滑风险品</span>
+                <strong id="riskProductCount">-</strong>
+                <small id="riskProductDesc">-</small>
+              </article>
+              <article class="summary-card">
+                <span>单品集中度</span>
+                <strong id="productConcentration">-</strong>
+                <small id="productConcentrationDesc">-</small>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>产品大类 GMV</h4>
+                  <span>点击大类可联动筛选</span>
+                </div>
+                <div id="categoryGmvChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>产品大类增长贡献</h4>
+                  <span>当前周期 vs 对比周期</span>
+                </div>
+                <div id="categoryContributionChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>TOP 商品 GMV</h4>
+                  <span>点击商品可联动筛选</span>
+                </div>
+                <div id="productGmvChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>TOP 商品出货数量</h4>
+                  <span>按当前筛选范围计算</span>
+                </div>
+                <div id="productQtyChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>商品环比增长 / 下滑</h4>
+                  <span>GMV 增量排序</span>
+                </div>
+                <div id="productGrowthChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>商品组合分层</h4>
+                  <span>GMV × 出货数量</span>
+                </div>
+                <div id="productMatrixChart" class="chart tall-chart"></div>
+              </article>
+            </div>
+
+            <article class="table-card">
+              <div class="card-title">
+                <h4>商品分层明细</h4>
+                <span>核心爆品 / 增长潜力品 / 下滑风险品 / 长尾低效品</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>商品</th>
+                      <th>编码</th>
+                      <th>产品大类</th>
+                      <th>分类</th>
+                      <th>GMV</th>
+                      <th>出货数量</th>
+                      <th>环比</th>
+                      <th>GMV 占比</th>
+                    </tr>
+                  </thead>
+                  <tbody id="productTableBody"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <section id="anomaly" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Anomaly & Opportunity</p>
+                <h3>异常与机会</h3>
+              </div>
+              <p id="anomalyConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>每日 GMV 异常高点 / 低点</h4>
+                  <span>基于箱线阈值与相对极值</span>
+                </div>
+                <div id="dailyAnomalyChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>近 7 日均值偏离</h4>
+                  <span>高于 / 低于近 7 日均值</span>
+                </div>
+                <div id="rollingAverageChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>异常渠道</h4>
+                  <span>环比波动较大的渠道</span>
+                </div>
+                <div id="anomalyChannelChart" class="chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>异常商品</h4>
+                  <span>拖累或跃升明显的商品</span>
+                </div>
+                <div id="anomalyProductChart" class="chart"></div>
+              </article>
+            </div>
+
+            <div class="opportunity-grid">
+              <article class="insight-card priority-card">
+                <h4>当前最需要关注的 3 个问题</h4>
+                <ol id="priorityList" class="priority-list"></ol>
+              </article>
+              <article class="insight-card">
+                <h4>异常日期清单</h4>
+                <ul id="anomalyDateList" class="insight-list"></ul>
+              </article>
+            </div>
+          </section>
+
+          <section id="traffic" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Traffic</p>
+                <h3>流量与转化</h3>
+              </div>
+              <p id="trafficConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="kpi-grid">
+              <article class="kpi-card">
+                <span class="kpi-label">累计访客（UV）</span>
+                <strong id="trafficKpiVisitors">-</strong>
+                <span id="trafficKpiVisitorsSub" class="kpi-sub">-</span>
+              </article>
+              <article class="kpi-card" id="trafficKpiImpressionsCard">
+                <span class="kpi-label">累计曝光</span>
+                <strong id="trafficKpiImpressions">-</strong>
+                <span class="kpi-sub">当前筛选范围内求和</span>
+              </article>
+              <article class="kpi-card" id="trafficKpiClicksCard">
+                <span class="kpi-label">累计点击</span>
+                <strong id="trafficKpiClicks">-</strong>
+                <span class="kpi-sub">当前筛选范围内求和</span>
+              </article>
+              <article class="kpi-card" id="trafficKpiCvrCard">
+                <span class="kpi-label">CVR（出货件数/UV）</span>
+                <strong id="trafficKpiConv">-</strong>
+                <span id="trafficKpiConvSub" class="kpi-sub">-</span>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4 id="trafficDailyChartTitle">每日访客趋势</h4>
+                  <span>与出货日历对齐的日粒度汇总</span>
+                </div>
+                <div id="trafficDailyChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card" id="trafficChannelChartCard">
+                <div class="card-title">
+                  <h4>渠道访客 TOP</h4>
+                  <span>按访客数排序（有数据时）</span>
+                </div>
+                <div id="trafficChannelChart" class="chart tall-chart"></div>
+              </article>
+            </div>
+          </section>
+
+          <section id="recommendation" class="module-section">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Management Actions</p>
+                <h3>经营建议</h3>
+              </div>
+              <p id="recommendationConclusion" class="section-conclusion">-</p>
+            </div>
+
+            <div class="opportunity-grid">
+              <article class="insight-card priority-card">
+                <h4>当前最重要的 3 个问题</h4>
+                <ol id="recommendationPriorityList" class="priority-list"></ol>
+              </article>
+              <article class="insight-card">
+                <h4>下一阶段建议</h4>
+                <ul id="actionList" class="insight-list"></ul>
+              </article>
+            </div>
+
+            <div class="chart-grid two-col">
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>渠道健康象限</h4>
+                  <span>体量 × 增长</span>
+                </div>
+                <div id="channelHealthChart" class="chart tall-chart"></div>
+              </article>
+              <article class="chart-card">
+                <div class="card-title">
+                  <h4>商品投入优先级</h4>
+                  <span>贡献 × 增长</span>
+                </div>
+                <div id="productPriorityChart" class="chart tall-chart"></div>
+              </article>
+            </div>
+
+            <article class="table-card">
+              <div class="card-title">
+                <h4>数据质量检查结果</h4>
+                <span>字段识别、日期清洗、文件一致性</span>
+              </div>
+              <div id="qualityPanel" class="field-status"></div>
+            </article>
+          </section>
         </div>
-        <div class="chart-card">
-          <div class="chart-title">客户结构 GMV 对比 <small>单位：万元</small></div>
-          <div class="chart sm" id="q1Customer"></div>
-        </div>
-      </div>
-      <div class="judgement" id="q1Judgement"></div>
-    </section>
+      </main>
+    </div>
 
-    <section class="section">
-      <div class="section-head">
-        <div>
-          <h2>GMV 趋势</h2>
-          <p class="sub">FY24、FY25、FY26 月度 GMV 对比，hover 可查看当月 GMV 与 FY25/FY26 对应同比。</p>
-        </div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">月度 GMV 对比 <small>单位：百万元</small></div>
-        <div class="chart tall" id="gmvTrend"></div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <div>
-          <h2>GMV 来源结构</h2>
-          <p class="sub">拆分自然销售、品专、推广、淘客、达人、店播，观察增长主要来自哪些渠道。</p>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="chart-card">
-          <div class="chart-title">FY25 月度来源结构 <small>单位：百万元</small></div>
-          <div class="chart" id="gmvStack"></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">FY25 来源占比 <small>全年 GMV 结构</small></div>
-          <div class="chart" id="gmvPie"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <div>
-          <h2>投放效率分析</h2>
-          <p class="sub">同时看花费、ROI 和推广成交，避免只看成交增长而忽略效率变化。</p>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="chart-card">
-          <div class="chart-title">FY25 投放花费与 ROI <small>花费：万元；ROI：倍</small></div>
-          <div class="chart" id="adEfficiency"></div>
-        </div>
-        <div class="mini-card" id="adSummary"></div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <div>
-          <h2>流量结构分析</h2>
-          <p class="sub">免费流量与付费流量的结构变化，用于判断流量规模扩张是否依赖投放拉动。</p>
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="chart-card">
-          <div class="chart-title">FY25 流量结构 <small>单位：万人</small></div>
-          <div class="chart" id="trafficStack"></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">付费流量占比 <small>FY24 vs FY25 vs FY26 YTD</small></div>
-          <div class="chart" id="paidShare"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <div>
-          <h2>客户结构分析</h2>
-          <p class="sub">对比新客、老客、会员的 GMV、购买人数与客单价，定位后续增长和利润抓手。</p>
-        </div>
-      </div>
-      <div class="grid-3">
-        <div class="chart-card">
-          <div class="chart-title">GMV 趋势对比 <small>FY25，百万元</small></div>
-          <div class="chart sm" id="customerGmv"></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">新客 / 老客购买人数 <small>FY25，万人</small></div>
-          <div class="chart sm" id="customerBuyers"></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">客单价对比 <small>FY25，元</small></div>
-          <div class="chart sm" id="customerAov"></div>
-        </div>
-      </div>
-      <div class="judgement">新客贡献提升、老客复购和会员价值是后续增长重点。</div>
-    </section>
-
-    <section class="section">
-      <div class="section-head">
-        <div>
-          <h2>经营洞察</h2>
-          <p class="sub">基于 Excel 数据自动计算并生成的复盘要点。</p>
-        </div>
-      </div>
-      <div class="insights" id="insights"></div>
-    </section>
-
-    <footer>数据来源：太太乐天猫旗舰店销售追踪表，截至 2026 年 4 月文件。</footer>
-  </main>
-
-  <script>
-    const months = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
-    const raw = {
-      gmv: [2183513.64,1222505.55,2001672.33,1590059.09,1900863.57,2432840.32,1466247.44,1899274.67,1974803.15,2965487.32,2864169.22,2243621.1,2207403.51,1540393.75,1997192.89,1694413.65,2282694.92,1977712.25,1748891.03,2539144.07,2821340.43,3473226.7,3489697.75,2722374.7,2987453.57,1608571.21,2987453.57,2986699.1],
-      uv: [267363,141483,280130,366973,325354,367618,383896,521987,476455,838674,789582,1513158,1879973,1007821,1665730,1555189,589900,1071897,784740,858166,751225,1075839,1139000,1069970,643329,490847,643329,729149],
-      cvr: [0.1442,0.133,0.1165,0.0854,0.1241,0.1443,0.1021,0.0947,0.1291,0.1271,0.0998,0.0382,0.0294,0.0476,0.0317,0.0254,0.0749499915,0.0545,0.0640403191,0.0735440463,0.0781949483,0.0715348672,0.0749429324,0.0699898128,0.1181,0.0867,0.1181,0.0971584683],
-      payers: [38561,18813,32635,31330,40384,53042,39179,49435,61530,106584,78799,56110,55241,47930,52837,39450,44213,58400,50255,63113,58742,76960,85360,74887,75946,42553,75946,70843],
-      aov: [56.62,64.98,61.34,50.75,47.07,45.87,37.42,38.42,32.09,27.82,36.35,38.79,39.96,32.14,37.8,42.95,51.6294963,33.8649358,34.8,40.23,48.03,45.13,40.88,36.35,39.34,32.74,39.34,42.1594102452],
-      natural: [704224.7417,71133.6205,570354.0337,441078.774,451684.994,386101.5131,478342.5033,753878.1023,810383.5902,951803.3218,938655.1494,865663.1364,574314.9663,448668.572,439516.44,335181.99,669743.1564,485569.86,854633.2972,524359.168,496199.5118,404510.388,467618.7645,675913.5082,198602.34,454108.33,722809.17,642557.68],
-      brandSearch: [248199.8283,151546.9095,404010.1263,240155.606,297855.176,324787.6169,204910.5967,244753.4277,307689.1898,393545.0782,265355.0106,237916.6536,256469.2,187078.67,237279.91,247834.73,294666.45,199530.52,168091.3,246071.8,234248.95,349179.35,341269.5,236179.04,301141.47,119376.9,193996.51,182763.41],
-      promotion: [810470.1,569750.24,589382.01,586083.5,706415.91,964528.05,543904.83,505942.06,520071.5,779029.1,765726.9,562900.48,773099.0937,499335.858,833934,649606.9,872256.3636,781596.55,541731.1328,727233.972,884397.5982,1310571.922,1445696.3755,1150992.9918,1508543.81,681137.5,1299675.92,1285129.92],
-      taoke: [420450.88,420450.88,420450.88,265636.61,366047.97,596358.83,198858.58,338051.83,300148.97,716882.8,770952.78,475271.41,528555.32,353400.83,435309.21,413297.29,397203.19,436118.82,93812.76,608716.15,1049775.66,1073329.88,1054854.4,429532.68,723928.3,316750.89,676451.74,833171.02],
-      creator: [168.09,9623.9,17475.28,25652.3,14293.16,5820.27,169.28,7085.06,5064.67,17255.87,8170.51,2189.12,1204.17,5855.27,334.63,2032.81,226.5,16014.68,217219.26,387296.37,113469.84,228639.92,37248.78,159247.07,169589.84,14920.35,37148.48,27334.09],
-      live: [0,0,0,31452.3,64566.36,155244.04,40061.65,49564.19,31445.23,106971.15,115308.87,99680.3,73760.76,46054.55,50818.7,46459.93,48599.26,58881.82,60024.79,45466.61,43248.87,106995.24,143009.93,70509.41,85647.81,22277.24,57371.75,15742.98],
-      brandCost: [77923.5,72896.17,77923.5,75409.84,77923.5,75409.84,77923.5,77923.5,75409.84,77923.5,75409.84,77923.5,86645,78260,86645,83850,86645,83850,86645,86645,81055,86645,83850,86645,102021,92148,102021,98730],
-      promoCost: [223270,115568,121023,137902,185411,187287,136317,139763,160022,232546,209215,162688,232161.89,118889.49,247646,249657.19,247098.12,208645.43,153900.89,176513.1,207605.07,331790.36,324875.59,311922.22,360208.67,150851.95,317605.81,305551.97],
-      brandRoi: [3.185173,2.078942,5.184702,3.184672,3.822405,4.306966,2.629638,3.140945,4.080226,5.050403,3.518838,3.053208,2.96,2.3904762331,2.7385297478,2.9556914729,3.4008477119,2.3796126416,1.94,2.84,2.89,4.03,4.07,2.7258242253,2.9517596377,1.2954909493,1.9015350761,1.851143624],
-      wujieRoi: [3.63,4.93,4.87,4.25,3.81,5.15,3.99,3.62,3.25,3.35,3.66,3.46,3.33,4.2,3.3674438513,2.6019955604,3.53,3.7460516149,3.52,4.12,4.26,3.95,4.45,3.69,4.1879719608,4.51527143,4.0921037307,4.2059290928],
-      promoSales: [1058669.9283,721297.1495,993392.1363,826239.106,1004271.086,1289315.6669,748815.4267,750695.4877,827760.6898,1172574.1782,1031081.9106,800817.1336,1029568.2937,686414.528,1071213.91,897441.63,1166922.8136,981127.07,709822.4328,973305.772,1118646.5482,1659751.272,1786965.8755,1387172.0318,1809685.28,800514.4,1493672.43,1467893.33],
-      freeTraffic: [218235,126764,223826,224414,262358,358563,263401,537470,363780,608798,530402,930581,2330846,1177168,1225128,591705,476872,890044,513278,736669,558952,740672,782524,774956,714295,411560,525545,586008],
-      paidTraffic: [181306,67871,169264,385562,310489,220007,167290,202590,161048,308378,274316,655408,574601,513228,715431,1230402,182518,237779,318503,178135,38032,54908,93466,51247,231551,125004,206456,249884],
-      ttlTraffic: [399541,194635,393090,609976,572847,578570,430691,740060,524828,917176,804718,1585989,2905447,1690396,1940559,1822107,659390,1127823,784740,858166,751225,1075839,1139000,1069970,945846,536564,732001,729149],
-      newGmv: [353675.76,443266.177,740407.28,635204.08,596692.64,774725.37,646171.51,637084.01,1055246.96,1650598.77,1715769.67,1108669.06,1035706.76,812672.56,929254.89,706514.59,1938525.99,914443.61,926991.29,1405233.3,1383444.02,1871832.17,1745425.85,1474657.88,1249988.58,795726.83,1369959.68,1308531.67],
-      newBuyers: [8725,13275,23570,22730,28830,40588,27869,37262,48695,80090,61921,41302,37731,34738,35013,25625,67648,37973,34775,46731,42700,55822,64776,55712,51658,29928,53702,49549],
-      newAov: [40.5359,33.391,31.4131,27.9456,20.6969,19.0875,23.186,17,21.6705,20.6093,27.709,26.843,27.4498,23.3943,26.5403,27.5713,28.6561,24.0814,26.6568,30.0707,32.3992,33.5322,22.1974,23.1974,24.1974,26.588,25.5104,26.4088411471],
-      oldGmv: [83920.84,701891.983,1115324.87,828078.03,921146.87,1194717.12,672533.05,901564.54,919556.19,1314888.55,1148399.55,1104292.16,1160985.66,727721.19,929254.89,987899.06,2404362.64,1063268.64,818179.74,1133910.77,1437896.41,1601321.53,1744271.9,1247716.82,1737464.99,812844.38,1617493.89,1678167.43],
-      oldBuyers: [1605,5149,9183,8670,11080,11982,10441,10902,12835,20320,16878,14808,19065,15638,17824,13866,39031,20427,15480,16382,16042,21138,20584,19175,24288,12625,22244,21294],
-      oldAov: [52.2871,136.3162,121.4554,95.5107,83.136,99.7093,64.4127,82.6972,71.6444,64.7091,68.0412,74.574,60.8962,46.5354,52.135,71.2461,61.6014,52.0521,52.854,69.2169,89.6332,75.7556,69.5359,70.5359,71.5359,64.3837,72.716,78.8094031182],
-      memberGmv: [989008.05,658343.7,1025940.61,626780.64,783176.69,1109831.24,452623.8,775614.3,666083.8,1177563.31,1064062.47,878973.38,781243.55,552559.94,852370.46,712019.86,1006295.25,875880.33,642666.09,872583.25,740935.2,1191466.91,1041986.22,688938.34,798229.76,456660.79,623644.06,601738.19],
-      memberBuyers: [11173,5037,8791,6804,8815,11702,7295,9814,18966,44394,22839,14250,15471,13932,15165,10540,13577,19317,9810,8264,6934,12219,12360,9540,10029,5629,6804,6133],
-      memberAov: [88.5177,130.7015,116.7035,92.1194,88.8459,94.8412,62.0458,79.0314,35.1199,26.5253,46.5897,61.6823,50.4973,39.6612,56.2064,67.5541,74.1176,45.3425,65.5113,105.5885,106.8554,97.5094,84.3031,79.5922,79.5922,81.1265,91.6584,92.6584450323]
-    };
-
-    const split = arr => ({ FY24: arr.slice(0, 12), FY25: arr.slice(12, 24), FY26: arr.slice(24) });
-    const data = Object.fromEntries(Object.entries(raw).map(([key, arr]) => [key, split(arr)]));
-    const fy26Months = data.gmv.FY26.length;
-    const fy26Label = `FY26 1-${fy26Months} 月`;
-    const fy26BaseLabel = `FY25 1-${fy26Months} 月`;
-    const totals = {
-      FY24: { gmv: 24745057.4, uv: 6272673, payers: 606402, cvr: 0.096673619, aov: 40.806358 },
-      FY25: { gmv: 28494485.65, uv: 13449450, payers: 707388, cvr: 0.052596054, aov: 40.281268 },
-      FY26: { gmv: 10570177.45, uv: 2506654, payers: 265288, cvr: 0.1058335135, aov: 39.8441597434 }
-    };
-
-    const colors = ["#c93426", "#ef7d2d", "#f5b84b", "#3f80c2", "#2f9b73", "#9a65c7", "#6f4b3e"];
-    const sum = arr => arr.reduce((a, b) => a + (Number(b) || 0), 0);
-    const pct = value => `${(value * 100).toFixed(1)}%`;
-    const wan = value => `${(value / 10000).toLocaleString("zh-CN", { maximumFractionDigits: 0 })}万`;
-    const million = value => +(value / 1000000).toFixed(2);
-    const tenK = value => +(value / 10000).toFixed(1);
-    const peopleWan = value => +(value / 10000).toFixed(1);
-    const yoy = (current, base) => (current - base) / base;
-    const chartBase = {
-      color: colors,
-      grid: { top: 52, right: 30, bottom: 38, left: 56 },
-      tooltip: { trigger: "axis", backgroundColor: "rgba(42,30,24,.92)", borderWidth: 0, textStyle: { color: "#fff" } },
-      legend: { top: 4, textStyle: { color: "#6e5d52" } },
-      xAxis: { type: "category", axisLine: { lineStyle: { color: "#e7d9cf" } }, axisLabel: { color: "#7a6b61" } },
-      yAxis: { type: "value", axisLine: { show: false }, splitLine: { lineStyle: { color: "#f0e7df" } }, axisLabel: { color: "#7a6b61" } }
-    };
-    const sourceMap = [
-      ["自然销售", "natural"],
-      ["品专", "brandSearch"],
-      ["推广", "promotion"],
-      ["淘客", "taoke"],
-      ["达人", "creator"],
-      ["店播", "live"]
-    ];
-    const customerMap = [
-      ["新客", "newGmv"],
-      ["老客", "oldGmv"],
-      ["会员", "memberGmv"]
-    ];
-    const charts = {};
-
-    function init(id, option) {
-      const chart = charts[id] || echarts.init(document.getElementById(id));
-      charts[id] = chart;
-      chart.setOption(option);
-      window.addEventListener("resize", () => chart.resize());
-      return chart;
-    }
-
-    function periodSum(key, fy, monthsCount = data[key][fy].length) {
-      return sum(data[key][fy].slice(0, monthsCount));
-    }
-
-    function periodMetrics(fy, monthsCount = data.gmv[fy].length) {
-      const gmv = periodSum("gmv", fy, monthsCount);
-      const uv = periodSum("uv", fy, monthsCount);
-      const payers = periodSum("payers", fy, monthsCount);
-      return {
-        gmv,
-        uv,
-        payers,
-        cvr: payers / uv,
-        aov: gmv / payers,
-        promoSales: periodSum("promoSales", fy, monthsCount),
-        promoCost: periodSum("promoCost", fy, monthsCount),
-        brandCost: periodSum("brandCost", fy, monthsCount),
-        brandRoi: periodSum("brandSearch", fy, monthsCount) / periodSum("brandCost", fy, monthsCount),
-        wujieRoi: periodSum("promotion", fy, monthsCount) / periodSum("promoCost", fy, monthsCount),
-        paidShare: periodSum("paidTraffic", fy, monthsCount) / periodSum("ttlTraffic", fy, monthsCount)
-      };
-    }
-
-    function deltaClass(value) {
-      return value >= 0 ? "delta" : "delta down";
-    }
-
-    function renderKpis() {
-      const growthAmount = totals.FY25.gmv - totals.FY24.gmv;
-      const cards = [
-        ["FY24 GMV", wan(totals.FY24.gmv), "完整年度基准盘"],
-        ["FY25 GMV", wan(totals.FY25.gmv), `同比增长 ${pct(yoy(totals.FY25.gmv, totals.FY24.gmv))}`],
-        ["FY26 YTD GMV", wan(totals.FY26.gmv), `仅工作表已有 1-${fy26Months} 月`],
-        ["FY25 vs FY24 增长额", wan(growthAmount), "GMV 绝对增量"],
-        ["FY25 GMV 同比增长率", pct(yoy(totals.FY25.gmv, totals.FY24.gmv)), "由 2,475 万增至 2,849 万"],
-        ["FY25 UV", totals.FY25.uv.toLocaleString("zh-CN"), "全年访客规模"],
-        ["FY25 支付人数 / CVR", `${totals.FY25.payers.toLocaleString("zh-CN")} / ${pct(totals.FY25.cvr)}`, "流量提升但转化承压"],
-        ["FY25 客单价", `${totals.FY25.aov.toFixed(2)}元`, "同比基本持平"]
-      ];
-      document.getElementById("kpis").innerHTML = cards.map((d, i) => `
-        <article class="kpi ${i === 1 ? "primary" : ""}">
-          <div class="label">${d[0]}</div>
-          <div class="value">${d[1]}</div>
-          <div class="note">${d[2]}</div>
-        </article>
-      `).join("");
-    }
-
-    function renderGmvTrend() {
-      init("gmvTrend", {
-        ...chartBase,
-        xAxis: { ...chartBase.xAxis, data: months },
-        yAxis: { ...chartBase.yAxis, name: "百万元", axisLabel: { formatter: value => (value / 1000000).toFixed(0) } },
-        tooltip: {
-          trigger: "axis",
-          backgroundColor: "rgba(42,30,24,.94)",
-          borderWidth: 0,
-          textStyle: { color: "#fff" },
-          formatter(params) {
-            const idx = params[0].dataIndex;
-            const lines = [`<b>${months[idx]}</b>`];
-            params.forEach(p => {
-              if (p.value == null) return;
-              const fy = p.seriesName;
-              const base = fy === "FY25" ? data.gmv.FY24[idx] : fy === "FY26" ? data.gmv.FY25[idx] : null;
-              const tag = base ? `，同比 ${pct(yoy(p.value, base))}` : "";
-              lines.push(`${p.marker}${fy}：${wan(p.value)}${tag}`);
-            });
-            return lines.join("<br/>");
-          }
-        },
-        series: [
-          { name: "FY24", type: "line", smooth: true, symbolSize: 7, lineStyle: { width: 3 }, data: data.gmv.FY24 },
-          { name: "FY25", type: "line", smooth: true, symbolSize: 7, lineStyle: { width: 3 }, data: data.gmv.FY25 },
-          { name: "FY26", type: "line", smooth: true, symbolSize: 8, lineStyle: { width: 4 }, data: data.gmv.FY26.concat(Array(12 - fy26Months).fill(null)) }
-        ]
-      });
-    }
-
-    function renderGmvStructure() {
-      init("gmvStack", {
-        ...chartBase,
-        xAxis: { ...chartBase.xAxis, data: months },
-        yAxis: { ...chartBase.yAxis, name: "百万元" },
-        series: sourceMap.map(([name, key]) => ({
-          name,
-          type: "bar",
-          stack: "gmv",
-          emphasis: { focus: "series" },
-          data: data[key].FY25.map(million)
-        }))
-      });
-      init("gmvPie", {
-        color: colors,
-        tooltip: { trigger: "item", formatter: "{b}<br/>{c}万 · {d}%" },
-        legend: { bottom: 0, textStyle: { color: "#6e5d52" } },
-        series: [{
-          name: "FY25 来源占比",
-          type: "pie",
-          radius: ["45%", "70%"],
-          center: ["50%", "43%"],
-          label: { formatter: "{b}\n{d}%", color: "#4d3c33" },
-          data: sourceMap.map(([name, key]) => ({ name, value: +((sum(data[key].FY25)) / 10000).toFixed(1) }))
-        }]
-      });
-    }
-
-    function renderAds() {
-      const promoSales24 = sum(data.promoSales.FY24);
-      const promoSales25 = sum(data.promoSales.FY25);
-      const promoCost24 = sum(data.promoCost.FY24);
-      const promoCost25 = sum(data.promoCost.FY25);
-      const brandRoi24 = sum(data.brandSearch.FY24) / sum(data.brandCost.FY24);
-      const brandRoi25 = sum(data.brandSearch.FY25) / sum(data.brandCost.FY25);
-      const wujieRoi24 = sum(data.promotion.FY24) / sum(data.promoCost.FY24);
-      const wujieRoi25 = sum(data.promotion.FY25) / sum(data.promoCost.FY25);
-      init("adEfficiency", {
-        ...chartBase,
-        grid: { top: 58, right: 58, bottom: 38, left: 58 },
-        xAxis: { ...chartBase.xAxis, data: months },
-        yAxis: [
-          { ...chartBase.yAxis, name: "万元", axisLabel: { color: "#7a6b61" } },
-          { type: "value", name: "ROI", min: 0, max: 5, splitLine: { show: false }, axisLabel: { color: "#7a6b61" } }
-        ],
-        series: [
-          { name: "品专花费", type: "bar", data: data.brandCost.FY25.map(tenK), barMaxWidth: 16 },
-          { name: "推广花费", type: "bar", data: data.promoCost.FY25.map(tenK), barMaxWidth: 16 },
-          { name: "品专 ROI", type: "line", yAxisIndex: 1, smooth: true, symbolSize: 7, data: data.brandRoi.FY25.map(v => +v.toFixed(2)) },
-          { name: "无界 ROI", type: "line", yAxisIndex: 1, smooth: true, symbolSize: 7, data: data.wujieRoi.FY25.map(v => +v.toFixed(2)) }
-        ]
-      });
-      document.getElementById("adSummary").innerHTML = `
-        <h3>投放增长是否有效率</h3>
-        <div class="metric-row"><span>FY25 推广成交较 FY24 增长</span><b>${wan(promoSales25 - promoSales24)} / ${pct(yoy(promoSales25, promoSales24))}</b></div>
-        <div class="metric-row"><span>FY25 推广花费较 FY24 增长</span><b>${wan(promoCost25 - promoCost24)} / ${pct(yoy(promoCost25, promoCost24))}</b></div>
-        <div class="metric-row"><span>品专 ROI</span><b>${brandRoi24.toFixed(2)} → ${brandRoi25.toFixed(2)}</b></div>
-        <div class="metric-row"><span>无界 ROI</span><b>${wujieRoi24.toFixed(2)} → ${wujieRoi25.toFixed(2)}</b></div>
-        <div class="judgement">推广成交增长明显，但推广花费增速更快；FY25 投放对规模有效，对效率需要继续优化，重点看高花费月份的转化承接和素材质量。</div>
-      `;
-    }
-
-    function renderTraffic() {
-      const paidShare = fy => sum(data.paidTraffic[fy]) / sum(data.ttlTraffic[fy]);
-      init("trafficStack", {
-        ...chartBase,
-        xAxis: { ...chartBase.xAxis, data: months },
-        yAxis: { ...chartBase.yAxis, name: "万人" },
-        series: [
-          { name: "免费流量", type: "bar", stack: "traffic", data: data.freeTraffic.FY25.map(peopleWan) },
-          { name: "付费流量", type: "bar", stack: "traffic", data: data.paidTraffic.FY25.map(peopleWan) }
-        ],
-        graphic: [{
-          type: "text",
-          right: 28,
-          top: 52,
-          style: { text: "2025 年 4 月付费流量占比抬升，\n随后免费流量成为规模盘主要支撑。", fill: "#7a6b61", fontSize: 12, lineHeight: 18 }
-        }]
-      });
-      init("paidShare", {
-        color: ["#c93426"],
-        grid: { top: 46, right: 24, bottom: 32, left: 42 },
-        tooltip: { trigger: "axis", formatter: p => `${p[0].name}<br/>付费流量占比：${p[0].value}%` },
-        xAxis: { type: "category", data: ["FY24", "FY25", "FY26 YTD"], axisLine: { lineStyle: { color: "#e7d9cf" } }, axisLabel: { color: "#7a6b61" } },
-        yAxis: { type: "value", axisLabel: { formatter: "{value}%" }, splitLine: { lineStyle: { color: "#f0e7df" } } },
-        series: [{
-          type: "bar",
-          data: [paidShare("FY24"), paidShare("FY25"), paidShare("FY26")].map(v => +(v * 100).toFixed(1)),
-          barWidth: 42,
-          label: { show: true, position: "top", formatter: "{c}%" },
-          itemStyle: { borderRadius: [8, 8, 0, 0] }
-        }]
-      });
-    }
-
-    function renderCustomers() {
-      init("customerGmv", {
-        ...chartBase,
-        grid: { top: 50, right: 18, bottom: 34, left: 48 },
-        xAxis: { ...chartBase.xAxis, data: months },
-        yAxis: { ...chartBase.yAxis, name: "百万元" },
-        series: [
-          { name: "新客 GMV", type: "line", smooth: true, data: data.newGmv.FY25.map(million) },
-          { name: "老客 GMV", type: "line", smooth: true, data: data.oldGmv.FY25.map(million) },
-          { name: "会员 GMV", type: "line", smooth: true, data: data.memberGmv.FY25.map(million) }
-        ]
-      });
-      init("customerBuyers", {
-        ...chartBase,
-        grid: { top: 50, right: 18, bottom: 34, left: 48 },
-        xAxis: { ...chartBase.xAxis, data: months },
-        yAxis: { ...chartBase.yAxis, name: "万人" },
-        series: [
-          { name: "新客", type: "bar", data: data.newBuyers.FY25.map(peopleWan), barMaxWidth: 16 },
-          { name: "老客", type: "bar", data: data.oldBuyers.FY25.map(peopleWan), barMaxWidth: 16 }
-        ]
-      });
-      init("customerAov", {
-        ...chartBase,
-        grid: { top: 50, right: 18, bottom: 34, left: 48 },
-        xAxis: { ...chartBase.xAxis, data: months },
-        yAxis: { ...chartBase.yAxis, name: "元" },
-        series: [
-          { name: "新客", type: "line", smooth: true, data: data.newAov.FY25.map(v => +v.toFixed(1)) },
-          { name: "老客", type: "line", smooth: true, data: data.oldAov.FY25.map(v => +v.toFixed(1)) },
-          { name: "会员", type: "line", smooth: true, data: data.memberAov.FY25.map(v => +v.toFixed(1)) }
-        ]
-      });
-    }
-
-    function renderSelectedAnalysis() {
-      const mode = document.getElementById("analysisYear").value;
-      const isYtd = mode === "FY26_YTD";
-      const currentFy = isYtd ? "FY26" : "FY25";
-      const baseFy = isYtd ? "FY25" : "FY24";
-      const monthsCount = isYtd ? fy26Months : 12;
-      const label = isYtd ? fy26Label : "FY25 全年";
-      const baseLabel = isYtd ? fy26BaseLabel : "FY24 全年";
-      const current = periodMetrics(currentFy, monthsCount);
-      const base = periodMetrics(baseFy, monthsCount);
-      const metrics = [
-        ["GMV", current.gmv, base.gmv, wan(current.gmv)],
-        ["UV", current.uv, base.uv, current.uv.toLocaleString("zh-CN")],
-        ["支付人数", current.payers, base.payers, current.payers.toLocaleString("zh-CN")],
-        ["CVR", current.cvr, base.cvr, pct(current.cvr)],
-        ["客单价", current.aov, base.aov, `${current.aov.toFixed(2)}元`]
-      ];
-
-      document.getElementById("q1Title").textContent = `${label}与 ${baseLabel}对比`;
-      document.getElementById("q1Sub").textContent = isYtd
-        ? `按 1-${fy26Months} 月同周期比较 FY26 表现，避免用 FY26 YTD 与 FY25 全年直接对比。`
-        : "按完整年度口径比较 FY25 与 FY24，便于观察全年增长质量。";
-      document.getElementById("q1CoreNote").textContent = `${baseLabel} = 100`;
-      document.getElementById("q1Cards").innerHTML = metrics.map(([name, currentValue, baseValue, display]) => {
-        const change = yoy(currentValue, baseValue);
-        return `
-          <article class="compare-card">
-            <div class="label">${label} ${name}</div>
-            <div class="value">${display}</div>
-            <div class="${deltaClass(change)}">较 ${baseLabel} ${pct(change)}</div>
-          </article>
-        `;
-      }).join("");
-
-      init("q1Core", {
-        color: ["#c93426", "#ef7d2d"],
-        grid: { top: 36, right: 16, bottom: 42, left: 42 },
-        tooltip: { trigger: "axis", formatter: p => `${p[0].name}<br/>${label}：${p[0].value}<br/>${baseLabel}：100` },
-        xAxis: { type: "category", data: ["GMV", "UV", "支付人数", "CVR", "客单价"], axisLine: { lineStyle: { color: "#e7d9cf" } }, axisLabel: { color: "#7a6b61" } },
-        yAxis: { type: "value", splitLine: { lineStyle: { color: "#f0e7df" } }, axisLabel: { color: "#7a6b61" } },
-        series: [{
-          name: label,
-          type: "bar",
-          barWidth: 28,
-          data: metrics.map(([, currentValue, baseValue]) => +((currentValue / baseValue) * 100).toFixed(1)),
-          label: { show: true, position: "top", formatter: "{c}" },
-          itemStyle: { borderRadius: [8, 8, 0, 0] },
-          markLine: {
-            symbol: "none",
-            lineStyle: { color: "#9f8a7b", type: "dashed" },
-            label: { formatter: `${baseLabel} 基准` },
-            data: [{ yAxis: 100 }]
-          }
-        }]
-      });
-
-      init("q1Source", {
-        ...chartBase,
-        grid: { top: 44, right: 16, bottom: 38, left: 46 },
-        xAxis: { ...chartBase.xAxis, data: sourceMap.map(([name]) => name) },
-        yAxis: { ...chartBase.yAxis, name: "万元" },
-        series: [
-          { name: baseLabel, type: "bar", data: sourceMap.map(([, key]) => tenK(periodSum(key, baseFy, monthsCount))), barMaxWidth: 16 },
-          { name: label, type: "bar", data: sourceMap.map(([, key]) => tenK(periodSum(key, currentFy, monthsCount))), barMaxWidth: 16 }
-        ]
-      });
-
-      init("q1Customer", {
-        ...chartBase,
-        grid: { top: 44, right: 16, bottom: 38, left: 46 },
-        xAxis: { ...chartBase.xAxis, data: customerMap.map(([name]) => name) },
-        yAxis: { ...chartBase.yAxis, name: "万元" },
-        series: [
-          { name: baseLabel, type: "bar", data: customerMap.map(([, key]) => tenK(periodSum(key, baseFy, monthsCount))), barMaxWidth: 22 },
-          { name: label, type: "bar", data: customerMap.map(([, key]) => tenK(periodSum(key, currentFy, monthsCount))), barMaxWidth: 22 }
-        ]
-      });
-
-      const promoSalesGrowth = yoy(current.promoSales, base.promoSales);
-      const promoCostGrowth = yoy(current.promoCost, base.promoCost);
-      const customerLead = customerMap
-        .map(([name, key]) => [name, yoy(periodSum(key, currentFy, monthsCount), periodSum(key, baseFy, monthsCount))])
-        .sort((a, b) => b[1] - a[1])[0];
-      document.getElementById("q1Judgement").innerHTML = isYtd
-        ? `${label} GMV 较 ${baseLabel} 增长 ${pct(yoy(current.gmv, base.gmv))}，UV 同比下降 ${pct(Math.abs(yoy(current.uv, base.uv)))}，但 CVR 提升至 ${pct(current.cvr)}，说明 FY26 YTD 增长更多来自转化效率和客单承接，而不是流量扩张。推广成交同比 ${pct(promoSalesGrowth)}，推广花费同比 ${pct(promoCostGrowth)}；客户结构中${customerLead[0]} GMV 提升最明显。`
-        : `${label} GMV 较 ${baseLabel} 增长 ${pct(yoy(current.gmv, base.gmv))}，UV 增长明显但 CVR 下滑，全年规模扩张成立，后续要把流量增量转化为更稳定的成交效率。`;
-      renderInsights();
-    }
-
-    function renderInsights() {
-      const selectedMode = document.getElementById("analysisYear").value;
-      const paidContent24 = sum(data.promotion.FY24) + sum(data.taoke.FY24) + sum(data.creator.FY24) + sum(data.live.FY24);
-      const paidContent25 = sum(data.promotion.FY25) + sum(data.taoke.FY25) + sum(data.creator.FY25) + sum(data.live.FY25);
-      const newGmvGrowth = yoy(sum(data.newGmv.FY25), sum(data.newGmv.FY24));
-      const oldAovAvg25 = sum(data.oldAov.FY25) / 12;
-      const memberAovAvg25 = sum(data.memberAov.FY25) / 12;
-      const ytdCurrent = periodMetrics("FY26", fy26Months);
-      const ytdBase = periodMetrics("FY25", fy26Months);
-      const insights = [
-        `FY25 GMV 较 FY24 增长 ${wan(totals.FY25.gmv - totals.FY24.gmv)}，同比 ${pct(yoy(totals.FY25.gmv, totals.FY24.gmv))}，整体规模明显抬升。`,
-        `FY25 增长主要由推广、淘客、达人和店播等付费/内容渠道拉动，相关渠道合计同比增长 ${pct(yoy(paidContent25, paidContent24))}。`,
-        `FY25 UV 从 ${wan(totals.FY24.uv)} 提升至 ${wan(totals.FY25.uv)}，但 CVR 从 ${pct(totals.FY24.cvr)} 降至 ${pct(totals.FY25.cvr)}，流量质量和转化承接需要优化。`,
-        `推广成交增长明显，但推广花费增速更快，需要结合品专 ROI、无界 ROI 和高峰月份转化效率继续拆解。`,
-        `FY25 新客 GMV 同比增长 ${pct(newGmvGrowth)}；老客平均客单价约 ${oldAovAvg25.toFixed(1)} 元，会员平均客单价约 ${memberAovAvg25.toFixed(1)} 元，是利润提升关键。`,
-        selectedMode === "FY26_YTD"
-          ? `${fy26Label} GMV 较 ${fy26BaseLabel} 增长 ${pct(yoy(ytdCurrent.gmv, ytdBase.gmv))}，同时 UV 同比下降，说明 2026 年初的核心看点是转化效率和成交结构，而不是单纯流量规模。`
-          : `FY26 YTD 当前按工作表已有月份展示，应按阶段表现单独观察，不能直接与 FY24/FY25 完整年度对比。`
-      ];
-      document.getElementById("insights").innerHTML = insights.map((text, i) => `
-        <div class="insight"><span>${i + 1}</span><div>${text}</div></div>
-      `).join("");
-    }
-
-    renderKpis();
-    renderSelectedAnalysis();
-    renderGmvTrend();
-    renderGmvStructure();
-    renderAds();
-    renderTraffic();
-    renderCustomers();
-    document.getElementById("analysisYear").addEventListener("change", renderSelectedAnalysis);
-  </script>
-</body>
+    <script src="./echarts.min.js"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"
+      crossorigin="anonymous"
+      onerror="this.onerror=null;this.src='./papaparse.min.js'"
+    ></script>
+    <script src="./data-bundle.js?v=20260516f"></script>
+    <script src="./traffic-data.js?v=20260516f"></script>
+    <script src="./script.js?v=20260516f"></script>
+    <script src="./ttl-traffic-panel.js?v=20260516f"></script>
+  </body>
 </html>

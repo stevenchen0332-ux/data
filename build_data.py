@@ -43,9 +43,10 @@ ALIASES = {
     "promotionSpend": ["推广花费", "推广费用", "广告消耗", "广告花费", "花费", "消耗"],
     "impressions": ["曝光", "曝光量", "展现", "展现量"],
     "clicks": ["点击", "点击量"],
+    "unitCost": ["含税进货价", "进货价", "成本单价", "含税成本"],
 }
 
-OPTIONAL_SUM_METRICS = ["visitors", "promotionSpend", "impressions", "clicks"]
+OPTIONAL_SUM_METRICS = ["visitors", "promotionSpend", "impressions", "clicks", "purchaseCost"]
 OPTIONAL_RATE_METRICS = ["conversionRate"]
 OPTIONAL_METRICS = OPTIONAL_SUM_METRICS + OPTIONAL_RATE_METRICS
 
@@ -242,8 +243,13 @@ def main() -> None:
                 "quantity": pd.to_numeric(chunk.loc[valid_mask, fields["quantity"]], errors="coerce").fillna(0) if fields.get("quantity") else 0,
             })
             for metric in OPTIONAL_SUM_METRICS:
+                if metric == "purchaseCost":
+                    continue
                 if fields.get(metric):
                     out[metric] = numeric_series(chunk.loc[valid_mask, fields[metric]])
+            if fields.get("unitCost"):
+                unit_price = numeric_series(chunk.loc[valid_mask, fields["unitCost"]])
+                out["purchaseCost"] = unit_price * pd.to_numeric(out["quantity"], errors="coerce").fillna(0)
             for metric in OPTIONAL_RATE_METRICS:
                 if fields.get(metric):
                     out[metric] = numeric_series(chunk.loc[valid_mask, fields[metric]], as_rate=True)

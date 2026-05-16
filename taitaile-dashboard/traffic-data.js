@@ -127,7 +127,7 @@
 
   async function loadTrafficDaily() {
     try {
-      const res = await fetch("./data/traffic_daily.json?v=20260516e");
+      const res = await fetch("./data/traffic_daily.json?v=20260516f");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       trafficState.rows = await res.json();
       trafficState.loaded = true;

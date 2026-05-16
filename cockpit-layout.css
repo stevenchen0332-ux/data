@@ -1,0 +1,425 @@
+/**
+ * 经营驾驶舱布局层 — 独立命名空间 cockpit-*
+ * 不修改原有 Shipment 图表组件的 class，仅通过外层包裹与覆盖 .filter-bar 在 cockpit 下的表现。
+ */
+
+:root {
+  --cockpit-radius: 12px;
+  --cockpit-card-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+
+.main-content {
+  padding: 20px 28px 40px;
+  max-width: 1680px;
+  margin: 0 auto;
+}
+
+.top-bar {
+  margin-bottom: 8px;
+}
+
+.cockpit-updated {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* —— 紧凑筛选条（目标总高约 88–104px，含次要行） —— */
+.cockpit-filter-bar.filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  max-height: none;
+  background: #ffffff;
+  border-radius: var(--cockpit-radius);
+  box-shadow: var(--cockpit-card-shadow);
+  border: 1px solid var(--border);
+}
+
+
+.cockpit-filter-row-dims {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
+  width: 100%;
+  padding-top: 6px;
+  border-top: 1px solid rgba(219, 227, 239, 0.85);
+}
+
+.cockpit-filter-row-dims .filter-field {
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.cockpit-filter-search {
+  flex: 1 1 240px;
+  max-width: 360px;
+  min-width: 200px;
+}
+
+.cockpit-filter-row-dims .cockpit-filter-compact {
+  width: min(148px, 20vw);
+  max-width: 168px;
+}
+
+.cockpit-filter-brand {
+  display: none;
+}
+
+.cockpit-filter-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
+  width: 100%;
+}
+
+.cockpit-filter-row-main .filter-field {
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.cockpit-filter-row-main .filter-field label {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* 勿作用于隐藏的 native multiple select，否则会撑出整页列表框 */
+.cockpit-filter-row-main select:not(.multi-dropdown-native),
+.cockpit-filter-row-main input[type="date"],
+.cockpit-filter-row-main input[type="search"] {
+  min-height: 34px;
+  font-size: 13px;
+  border-radius: 10px;
+}
+
+.cockpit-filter-compact {
+  flex: 0 0 auto;
+  width: min(148px, 22vw);
+  max-width: 168px;
+}
+
+.cockpit-filter-compact.filter-field-multi-dropdown {
+  width: min(160px, 24vw);
+  max-width: 180px;
+}
+
+.cockpit-filter-row-main .multi-dropdown-trigger {
+  min-height: 34px;
+  border-radius: 10px;
+  width: 100%;
+}
+
+/* 彻底隐藏原生多选，仅保留触发按钮 + 浮层 */
+.cockpit-filter-bar select.multi-dropdown-native,
+.multi-dropdown-root select.multi-dropdown-native {
+  display: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+}
+
+.multi-dropdown-root {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 34px;
+}
+
+.multi-dropdown-panel:not(.is-overlay) {
+  display: none !important;
+}
+
+.multi-dropdown-panel.is-overlay:not([hidden]) {
+  display: block !important;
+}
+
+.cockpit-filter-bar .filter-bar-row-dates {
+  display: contents;
+}
+
+.cockpit-filter-bar .filter-bar-row-dims {
+  display: contents;
+}
+
+.cockpit-filter-bar .filter-dims-primary-grid {
+  display: contents;
+}
+
+.cockpit-filter-bar .filter-multi-hint {
+  display: none;
+}
+
+.cockpit-filter-row-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  padding-top: 2px;
+  border-top: 1px solid rgba(219, 227, 239, 0.85);
+}
+
+.cockpit-filter-row-secondary .filter-field-search-inline {
+  flex: 1 1 220px;
+  max-width: 420px;
+}
+
+.cockpit-compare-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.cockpit-compare-label {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 0 2px 8px;
+  white-space: nowrap;
+}
+
+.cockpit-compare-inline input[type="date"] {
+  width: 132px;
+}
+
+.cockpit-filter-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.cockpit-filter-actions .ghost-button,
+.cockpit-filter-actions .primary-button {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+/* 下拉浮层：不撑开文档流 */
+.multi-dropdown-panel[hidden] {
+  display: none !important;
+}
+
+.multi-dropdown-panel.is-overlay {
+  position: fixed !important;
+  left: 0;
+  top: 0;
+  right: auto;
+  width: min(320px, 92vw);
+  max-height: min(320px, 50vh);
+  z-index: 500 !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
+.multi-dropdown-root {
+  overflow: visible;
+}
+
+.cockpit-filter-bar {
+  max-height: 148px;
+  overflow: visible;
+}
+
+.cockpit-filter-row-secondary {
+  min-height: 0;
+  padding-top: 6px;
+}
+
+/* 首屏：有数据时优先看到 KPI，而不是被筛选条挤没 */
+#dashboardContent:not(.hidden) {
+  display: block;
+}
+
+#dashboardContent:not(.hidden) .cockpit-executive {
+  margin-top: 4px;
+}
+
+/* —— 高管 KPI —— */
+.cockpit-executive {
+  margin-bottom: 20px;
+}
+
+.cockpit-exec-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1200px) {
+  .cockpit-exec-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .cockpit-exec-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.cockpit-exec-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--cockpit-radius);
+  box-shadow: var(--cockpit-card-shadow);
+  padding: 14px 14px 12px;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cockpit-exec-card--accent {
+  background: linear-gradient(145deg, #f8fafc 0%, #ffffff 55%);
+}
+
+.cockpit-exec-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.cockpit-exec-value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.cockpit-exec-sub {
+  font-size: 11px;
+  color: var(--muted);
+  min-height: 28px;
+  line-height: 1.35;
+}
+
+.cockpit-exec-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: auto;
+}
+
+.cockpit-exec-trend--up {
+  color: var(--positive);
+}
+
+.cockpit-exec-trend--down {
+  color: var(--negative);
+}
+
+.cockpit-exec-trend--flat {
+  color: var(--muted);
+}
+
+/* —— 趋势四宫格 —— */
+.cockpit-exec-trends {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 900px) {
+  .cockpit-exec-trends {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cockpit-exec-trend-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--cockpit-radius);
+  box-shadow: var(--cockpit-card-shadow);
+  padding: 12px 14px 10px;
+}
+
+.cockpit-exec-trend-card h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.cockpit-exec-trend-card .cockpit-exec-trend-hint {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.cockpit-exec-chart {
+  width: 100%;
+  height: 360px;
+}
+
+/* —— 经营诊断 —— */
+.cockpit-exec-diagnosis {
+  background: linear-gradient(135deg, #f0f6ff 0%, #ffffff 70%);
+  border: 1px solid #c7d8f5;
+  border-radius: var(--cockpit-radius);
+  box-shadow: var(--cockpit-card-shadow);
+  padding: 16px 18px;
+  margin-bottom: 8px;
+}
+
+.cockpit-exec-diagnosis h4 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.cockpit-exec-diagnosis ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.cockpit-exec-formula {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.meta-strip {
+  margin-bottom: 14px;
+  border-radius: var(--cockpit-radius);
+}
+
+.section-head {
+  margin-top: 8px;
+}
+
+.story-nav {
+  margin-bottom: 14px;
+  border-radius: 10px;
+  padding: 6px;
+  background: #f1f5f9;
+}
