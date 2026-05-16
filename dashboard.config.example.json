@@ -1,0 +1,12 @@
+{
+  "shipmentSourceDir": "/Users/chenjiwei/Desktop/日数据",
+  "trafficSourceDir": "/Users/chenjiwei/Desktop/日数据/流量",
+  "shipmentSourceDirCI": "data/shipment",
+  "trafficSourceDirCI": "data/traffic",
+  "outputDataBundle": "data-bundle.js",
+  "outputTrafficJson": "data/traffic_daily.json",
+  "mirrorSubdir": "taitaile-dashboard",
+  "bumpCacheOnRefresh": true,
+  "publish": true,
+  "commitMessage": null
+}

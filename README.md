@@ -1,6 +1,23 @@
 # 太太乐全渠道经营驾驶舱发布版
 
-这是一个可直接发布的静态网站版本，入口文件是 `index.html`。页面不依赖后端，数据已内嵌在同目录的 `data-bundle.js` 中。
+这是一个可直接发布的静态网站版本，入口文件是 `index.html`。页面不依赖后端，数据来自同目录的 `data-bundle.js` 与 `data/traffic_daily.json`。
+
+## 数据自动更新（推荐）
+
+更新 5 月出货、或新增 6 月流量表后，在本机执行一条命令即可重建并发布线上：
+
+```bash
+cp dashboard.config.example.json dashboard.config.json   # 首次
+chmod +x scripts/refresh_and_publish.sh
+./scripts/refresh_and_publish.sh
+```
+
+默认读取：
+
+- 出货：`~/Desktop/日数据/*.csv`
+- 流量：`~/Desktop/日数据/流量/*.xlsx`
+
+详见 [data/README.md](data/README.md)。
 
 ## 本地预览
 
