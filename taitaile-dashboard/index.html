@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>太太乐全渠道经营驾驶舱</title>
-    <link rel="stylesheet" href="./style.css?v=20260516h" />
-    <link rel="stylesheet" href="./ttl-traffic.css?v=20260516h" />
-    <link rel="stylesheet" href="./cockpit-layout.css?v=20260516h" />
+    <link rel="stylesheet" href="./style.css?v=20260516n" />
+    <link rel="stylesheet" href="./ttl-traffic.css?v=20260516n" />
+    <link rel="stylesheet" href="./cockpit-layout.css?v=20260516n" />
   </head>
   <body>
     <div class="app-shell">
@@ -36,12 +36,8 @@
             <span class="nav-icon">04</span>
             <span>异常监控</span>
           </button>
-          <button class="nav-item" data-module="traffic" type="button">
-            <span class="nav-icon">05</span>
-            <span>流量与转化</span>
-          </button>
           <button class="nav-item" data-module="recommendation" type="button">
-            <span class="nav-icon">06</span>
+            <span class="nav-icon">05</span>
             <span>经营建议</span>
           </button>
         </nav>
@@ -236,7 +232,6 @@
             <button class="nav-item story-tab" data-module="channel" type="button">渠道归因</button>
             <button class="nav-item story-tab" data-module="product" type="button">商品经营</button>
             <button class="nav-item story-tab" data-module="anomaly" type="button">异常监控</button>
-            <button class="nav-item story-tab" data-module="traffic" type="button">流量与转化</button>
             <button class="nav-item story-tab" data-module="recommendation" type="button">经营建议</button>
           </nav>
 
@@ -249,46 +244,46 @@
                   <div id="execS0" class="cockpit-exec-sub">当前筛选周期</div>
                   <div id="execT0" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
-                <article class="cockpit-exec-card cockpit-exec-card--accent">
-                  <span class="cockpit-exec-label">GMV</span>
-                  <strong id="execV1" class="cockpit-exec-value">-</strong>
-                  <div id="execS1" class="cockpit-exec-sub">出货口径金额</div>
-                  <div id="execT1" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
-                </article>
                 <article class="cockpit-exec-card">
                   <span class="cockpit-exec-label">日均出货</span>
+                  <strong id="execV1" class="cockpit-exec-value">-</strong>
+                  <div id="execS1" class="cockpit-exec-sub">件 / 有数据日</div>
+                  <div id="execT1" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card cockpit-exec-card--accent">
+                  <span class="cockpit-exec-label">GMV</span>
                   <strong id="execV2" class="cockpit-exec-value">-</strong>
-                  <div id="execS2" class="cockpit-exec-sub">件 / 有数据日</div>
+                  <div id="execS2" class="cockpit-exec-sub">流量 GMV（主）· 副标出货 GMV</div>
                   <div id="execT2" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
                 <article class="cockpit-exec-card">
-                  <span class="cockpit-exec-label">出货同比（对比期）</span>
+                  <span class="cockpit-exec-label">UV</span>
                   <strong id="execV3" class="cockpit-exec-value">-</strong>
-                  <div id="execS3" class="cockpit-exec-sub">件数 vs 对比周期</div>
+                  <div id="execS3" class="cockpit-exec-sub">流量表 UV 求和</div>
                   <div id="execT3" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
                 <article class="cockpit-exec-card">
-                  <span class="cockpit-exec-label">GMV 环比</span>
+                  <span class="cockpit-exec-label">转化率（CVR）</span>
                   <strong id="execV4" class="cockpit-exec-value">-</strong>
-                  <div id="execS4" class="cockpit-exec-sub">对上一对比窗口</div>
+                  <div id="execS4" class="cockpit-exec-sub">支付买家数 ÷ UV</div>
                   <div id="execT4" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
                 <article class="cockpit-exec-card">
-                  <span class="cockpit-exec-label">客单价（AOV）</span>
+                  <span class="cockpit-exec-label">推广费</span>
                   <strong id="execV5" class="cockpit-exec-value">-</strong>
-                  <div id="execS5" class="cockpit-exec-sub">GMV ÷ 出货件数</div>
+                  <div id="execS5" class="cockpit-exec-sub">推广费用合计</div>
                   <div id="execT5" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
                 <article class="cockpit-exec-card">
                   <span class="cockpit-exec-label">广告费率</span>
                   <strong id="execV6" class="cockpit-exec-value">-</strong>
-                  <div id="execS6" class="cockpit-exec-sub">推广费 / GMV</div>
+                  <div id="execS6" class="cockpit-exec-sub">推广费 / 流量 GMV</div>
                   <div id="execT6" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
                 <article class="cockpit-exec-card">
-                  <span class="cockpit-exec-label">ROI</span>
+                  <span class="cockpit-exec-label">客单价</span>
                   <strong id="execV7" class="cockpit-exec-value">-</strong>
-                  <div id="execS7" class="cockpit-exec-sub">GMV / 推广费</div>
+                  <div id="execS7" class="cockpit-exec-sub">流量 GMV ÷ 支付买家数</div>
                   <div id="execT7" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
 
@@ -312,7 +307,7 @@
                 </article>
                 <article class="cockpit-exec-trend-card">
                   <h4>转化率趋势</h4>
-                  <p class="cockpit-exec-trend-hint">出货件数 ÷ UV（按日）</p>
+                  <p class="cockpit-exec-trend-hint">支付买家数 ÷ UV（按日）</p>
                   <div id="execTrendCvr" class="cockpit-exec-chart"></div>
                 </article>
               </div>
@@ -408,7 +403,7 @@
               <ul id="overviewInsights" class="insight-list"></ul>
             </article>
 
-                        <div id="ttlTrafficAnalysisPanel" class="ttl-traffic ttl-traffic--root" aria-label="流量转化经营分析">
+<div id="ttlTrafficAnalysisPanel" class="ttl-traffic ttl-traffic--root" aria-label="流量转化经营分析">
               <div class="ttl-traffic__head">
                 <div>
                   <h3 class="ttl-traffic__title">流量转化经营分析</h3>
@@ -462,14 +457,14 @@
                 <div class="ttl-traffic__chart-card">
                   <div class="ttl-traffic__chart-title">
                     <h4>GMV 拆解趋势</h4>
-                    <span>UV / CVR(%) / AOV / GMV（近 45 日）</span>
+                    <span>UV / GMV（近 45 日）</span>
                   </div>
                   <div id="ttlTrafficBridgeChart" class="ttl-traffic__chart ttl-traffic__chart--tall"></div>
                 </div>
                 <div class="ttl-traffic__chart-card">
                   <div class="ttl-traffic__chart-title">
-                    <h4>出货 × GMV 日趋势</h4>
-                    <span>左轴出货数量 · 右轴 GMV（随渠道/店铺筛选联动）</span>
+                    <h4>GMV × 推广费 日趋势</h4>
+                    <span>左轴 GMV · 右轴推广费（随渠道/店铺筛选联动）</span>
                   </div>
                   <div id="ttlTrafficDualAxisChart" class="ttl-traffic__chart ttl-traffic__chart--tall"></div>
                 </div>
@@ -721,56 +716,6 @@
             </div>
           </section>
 
-          <section id="traffic" class="module-section">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">Traffic</p>
-                <h3>流量与转化</h3>
-              </div>
-              <p id="trafficConclusion" class="section-conclusion">-</p>
-            </div>
-
-            <div class="kpi-grid">
-              <article class="kpi-card">
-                <span class="kpi-label">累计访客（UV）</span>
-                <strong id="trafficKpiVisitors">-</strong>
-                <span id="trafficKpiVisitorsSub" class="kpi-sub">-</span>
-              </article>
-              <article class="kpi-card" id="trafficKpiImpressionsCard">
-                <span class="kpi-label">累计曝光</span>
-                <strong id="trafficKpiImpressions">-</strong>
-                <span class="kpi-sub">当前筛选范围内求和</span>
-              </article>
-              <article class="kpi-card" id="trafficKpiClicksCard">
-                <span class="kpi-label">累计点击</span>
-                <strong id="trafficKpiClicks">-</strong>
-                <span class="kpi-sub">当前筛选范围内求和</span>
-              </article>
-              <article class="kpi-card" id="trafficKpiCvrCard">
-                <span class="kpi-label">CVR（出货件数/UV）</span>
-                <strong id="trafficKpiConv">-</strong>
-                <span id="trafficKpiConvSub" class="kpi-sub">-</span>
-              </article>
-            </div>
-
-            <div class="chart-grid two-col">
-              <article class="chart-card">
-                <div class="card-title">
-                  <h4 id="trafficDailyChartTitle">每日访客趋势</h4>
-                  <span>与出货日历对齐的日粒度汇总</span>
-                </div>
-                <div id="trafficDailyChart" class="chart tall-chart"></div>
-              </article>
-              <article class="chart-card" id="trafficChannelChartCard">
-                <div class="card-title">
-                  <h4>渠道访客 TOP</h4>
-                  <span>按访客数排序（有数据时）</span>
-                </div>
-                <div id="trafficChannelChart" class="chart tall-chart"></div>
-              </article>
-            </div>
-          </section>
-
           <section id="recommendation" class="module-section">
             <div class="section-head">
               <div>
@@ -826,10 +771,10 @@
       crossorigin="anonymous"
       onerror="this.onerror=null;this.src='./papaparse.min.js'"
     ></script>
-    <script src="./data-bundle.js?v=20260516j"></script>
-    <script src="./merged-daily-data.js?v=20260516j"></script>
-    <script src="./traffic-data.js?v=20260516j"></script>
-    <script src="./script.js?v=20260516j"></script>
-    <script src="./ttl-traffic-panel.js?v=20260516j"></script>
-  </body>
+    <script src="./data-bundle.js?v=20260516n"></script>
+    <script src="./merged-daily-data.js?v=20260516n"></script>
+    <script src="./traffic-data.js?v=20260516n"></script>
+    <script src="./script.js?v=20260516n"></script>
+    <script src="./ttl-traffic-panel.js?v=20260516n"></script>
+      </body>
 </html>

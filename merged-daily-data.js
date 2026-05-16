@@ -12,6 +12,18 @@
     trafficRowCount: 0,
   };
 
+  /** 出货筛选渠道名 → 流量表经销商可能名称（精确日期匹配不变） */
+  const channelAliasMap = {
+    家凯猫旗: ["家凯猫旗", "家凯天猫", "家凯猫旗舰店", "家凯猫旗店", "家凯旗舰店"],
+    小宅拼多多: ["小宅拼多多"],
+    家凯拼多多: ["家凯拼多多"],
+    三点水拼多多: ["三点水拼多多"],
+    思其达拼多多: ["思其达拼多多"],
+    心羽拼多多: ["心羽拼多多"],
+    家凯餐饮: ["家凯餐饮"],
+    嘉乐恒拼多多: ["嘉乐恒拼多多"],
+  };
+
   function normKey(s) {
     return String(s || "")
       .trim()
@@ -153,22 +165,79 @@
     return all;
   }
 
+  function aliasesForFilterChannel(channel) {
+    const key = String(channel || "").trim();
+    return channelAliasMap[key] || [key];
+  }
+
+  function expandChannelFilterKeys(channelSet) {
+    if (!channelSet || !channelSet.size) return null;
+    const expanded = new Set();
+    channelSet.forEach((ch) => {
+      aliasesForFilterChannel(ch).forEach((alias) => expanded.add(normKey(alias)));
+    });
+    return expanded;
+  }
+
+  function rowMatchesChannelFilter(row, expandedKeys) {
+    if (!expandedKeys) return true;
+    return expandedKeys.has(normKey(row.channel));
+  }
+
+  function listTrafficDealersInMerged() {
+    const set = new Set();
+    state.all.forEach((row) => {
+      if (row.UV > 0 || row.trafficGMV > 0 || row.adCost > 0) set.add(row.channel);
+    });
+    return [...set].sort();
+  }
+
+  function emitChannelTrafficDebug(channelSet, range, matchedRows, sums) {
+    if (!channelSet || !channelSet.size) return;
+    const filterChannels = [...channelSet];
+    const aliasLists = Object.fromEntries(filterChannels.map((ch) => [ch, aliasesForFilterChannel(ch)]));
+    const expandedKeys = expandChannelFilterKeys(channelSet);
+    const trafficRows = matchedRows.filter((r) => r.UV > 0 || r.trafficGMV > 0 || r.adCost > 0);
+    const payload = {
+      filterChannels,
+      normalizedAliases: aliasLists,
+      expandedNormKeys: expandedKeys ? [...expandedKeys] : [],
+      trafficDealersInTable: listTrafficDealersInMerged(),
+      matchedRowCount: matchedRows.length,
+      trafficMatchedRowCount: trafficRows.length,
+      uvTotal: sums.UV,
+      adCostTotal: sums.adCost,
+      trafficGmvTotal: sums.trafficGMV,
+      range: range ? `${range.start} ~ ${range.end}` : "—",
+    };
+    console.info("[TTL Channel Traffic Debug]", payload);
+
+    filterChannels.forEach((ch) => {
+      const aliases = aliasesForFilterChannel(ch);
+      const hasTraffic = trafficRows.some((r) => aliases.some((a) => normKey(a) === normKey(r.channel)));
+      if (!hasTraffic && range) {
+        console.warn(`未匹配到${ch}流量数据，请检查经销商字段名称`, {
+          filterChannel: ch,
+          triedAliases: aliases,
+          trafficDealersInTable: listTrafficDealersInMerged().filter((n) => n.includes(ch.slice(0, 2))),
+        });
+      }
+    });
+
+    if (typeof window !== "undefined") {
+      window.__TTL_CHANNEL_TRAFFIC_DEBUG__ = payload;
+    }
+    return payload;
+  }
+
   function filterMergedDaily(rows, { start, end, channelSet }) {
     const s = start ? normalizeDateKey(start) : "";
     const e = end ? normalizeDateKey(end) : "";
+    const expandedKeys = expandChannelFilterKeys(channelSet);
     return (rows || []).filter((row) => {
       if (s && row.date < s) return false;
       if (e && row.date > e) return false;
-      if (channelSet && channelSet.size) {
-        let ok = false;
-        for (const ch of channelSet) {
-          if (normKey(ch) === normKey(row.channel)) {
-            ok = true;
-            break;
-          }
-        }
-        if (!ok) return false;
-      }
+      if (!rowMatchesChannelFilter(row, expandedKeys)) return false;
       return true;
     });
   }
@@ -301,6 +370,10 @@
     const curDaily = aggregateMergedByDate(curRows);
     const prevDaily = aggregateMergedByDate(prevRows);
 
+    if (channelSet && channelSet.size) {
+      emitChannelTrafficDebug(channelSet, range, curRows, curSums);
+    }
+
     return {
       all: state.all,
       curRows,
@@ -373,6 +446,11 @@
     aggregateMergedByDate,
     buildMergedContext,
     printMergedDailyValidation,
+    emitChannelTrafficDebug,
+    expandChannelFilterKeys,
+    aliasesForFilterChannel,
+    channelAliasMap,
+    listTrafficDealersInMerged,
     toTrafficBlock,
     toDailySeries,
     normKey,

@@ -1214,13 +1214,12 @@
       renderChannel(context);
       renderProduct(context);
       renderAnomaly(context);
-      renderTraffic(context);
       renderRecommendation(context);
       updateHealthText(context);
       window.dispatchEvent(new CustomEvent("ttl-dashboard-context-updated", { detail: { context } }));
     } catch (err) {
       console.error("[TTL Dashboard] 渲染中断", err);
-      showToastLikeStatus(`看板渲染异常：${err.message || err}。请强刷页面（?v=20260516j）或检查 script.js 是否已更新。`, true);
+      showToastLikeStatus(`看板渲染异常：${err.message || err}。请强刷页面（?v=20260516m）或检查 script.js 是否已更新。`, true);
     }
     resizeCharts();
   }
@@ -1622,23 +1621,19 @@
       renderList(list, ["对比期或当前筛选下数据不足，暂无法生成诊断。"]);
       return;
     }
-    const tr = context.traffic;
-    const tc = tr?.cur;
-    const tp = tr?.prev;
-    const uv0 = tc?.uv > 0 ? tc.uv : 0;
-    const uv1 = tp?.uv > 0 ? tp.uv : 0;
+    const { cur, prev } = mergedSumsForExec(context);
+    const uv0 = cur.UV > 0 ? cur.UV : 0;
+    const uv1 = prev.UV > 0 ? prev.UV : 0;
     const uvMom = uv1 > 0 ? (uv0 - uv1) / uv1 : NaN;
-    const cvr0 = tc?.cvr;
-    const cvr1 = tp?.cvr;
-    const aov0 = tc?.aov;
-    const aov1 = tp?.aov;
+    const cvr0 = cur.CVR;
+    const cvr1 = prev.CVR;
+    const aov0 = cur.buyers > 0 ? cur.trafficGMV / cur.buyers : cur.ASP;
+    const aov1 = prev.buyers > 0 ? prev.trafficGMV / prev.buyers : prev.ASP;
     const qtyMom = calcGrowth(currentTotals.quantity, previousTotals.quantity);
-    const spend0 = tc?.promo > 0 ? tc.promo : 0;
-    const spend1 = tp?.promo > 0 ? tp.promo : 0;
-    const gmv0 = tc?.gmv > 0 ? tc.gmv : totals.amount;
-    const gmv1 = tp?.gmv > 0 ? tp.gmv : previousTotals.amount;
-    const roi0 = spend0 > 0 ? gmv0 / spend0 : 0;
-    const roi1 = spend1 > 0 ? gmv1 / spend1 : 0;
+    const spend0 = cur.adCost > 0 ? cur.adCost : 0;
+    const spend1 = prev.adCost > 0 ? prev.adCost : 0;
+    const gmv0 = cur.trafficGMV > 0 ? cur.trafficGMV : totals.amount;
+    const gmv1 = prev.trafficGMV > 0 ? prev.trafficGMV : previousTotals.amount;
 
     const bullets = [];
     if (mom.rate < -0.02 && Number.isFinite(uvMom) && Math.abs(uvMom) < 0.04 && Number.isFinite(cvr0) && Number.isFinite(cvr1) && cvr0 < cvr1 * 0.97) {
@@ -1650,8 +1645,8 @@
     if (mom.rate < -0.02 && Number.isFinite(aov0) && Number.isFinite(aov1) && aov0 < aov1 * 0.95) {
       bullets.push("客单价下行是主因 → 关注折扣深度、件单价与品类组合。");
     }
-    if (spend0 > 0 && roi0 > 0 && roi1 > 0 && roi0 < roi1 * 0.9) {
-      bullets.push("ROI 走弱，单位推广产出下降 → 收紧低效花费并复盘高费低产渠道。");
+    if (spend0 > 0 && spend1 > 0 && spend0 > spend1 * 1.1 && mom.rate <= 0) {
+      bullets.push("推广费上升而出货 GMV 未同步增长 → 复核投放效率与渠道结构。");
     }
     if (bullets.length < 3) {
       bullets.push(
@@ -1661,12 +1656,43 @@
     renderList(list, bullets.slice(0, 3));
   }
 
+  function mergedSumsForExec(context) {
+    const md = context.mergedDaily;
+    if (md?.curSums) {
+      return { cur: md.curSums, prev: md.prevSums || {} };
+    }
+    const tr = context.traffic;
+    if (tr?.cur) {
+      return {
+        cur: {
+          shipmentQty: context.totals?.quantity || 0,
+          shipmentGMV: context.totals?.amount || 0,
+          UV: tr.cur.uv || 0,
+          CVR: tr.cur.cvr,
+          adCost: tr.cur.promo || 0,
+          trafficGMV: tr.cur.gmv || 0,
+          buyers: tr.cur.buyers || 0,
+          ASP: tr.cur.aov,
+          adRate: tr.cur.adRate,
+        },
+        prev: {
+          UV: tr.prev?.uv || 0,
+          CVR: tr.prev?.cvr,
+          adCost: tr.prev?.promo || 0,
+          trafficGMV: tr.prev?.gmv || 0,
+          buyers: tr.prev?.buyers || 0,
+          ASP: tr.prev?.aov,
+          adRate: tr.prev?.adRate,
+        },
+      };
+    }
+    return { cur: {}, prev: {} };
+  }
+
   function renderExecutiveCockpit(context) {
     if (!document.getElementById("execV0")) return;
-    const { totals, currentTotals, previousTotals, mom, filteredRecords } = context;
-    const tr = context.traffic;
-    const tc = tr?.cur;
-    const tp = tr?.prev;
+    const { totals, currentTotals, previousTotals, filteredRecords } = context;
+    const { cur, prev } = mergedSumsForExec(context);
 
     if (!filteredRecords.length) {
       for (let i = 0; i < 8; i += 1) {
@@ -1685,47 +1711,73 @@
     const shipAov = totals.quantity > 0 ? totals.amount / totals.quantity : null;
     const prevShipAov = previousTotals.quantity > 0 ? previousTotals.amount / previousTotals.quantity : null;
 
+    const dailyShip = totals.dateCount ? totals.quantity / totals.dateCount : 0;
+    const prevDailyShip = previousTotals.dateCount ? previousTotals.quantity / previousTotals.dateCount : 0;
+
+    const uv = cur.UV || 0;
+    const prevUv = prev.UV || 0;
+    const cvr = cur.CVR;
+    const prevCvr = prev.CVR;
+    const promo = cur.adCost || 0;
+    const prevPromo = prev.adCost || 0;
+    const trafficGmv = cur.trafficGMV || 0;
+    const buyers = cur.buyers || 0;
+    const adRate = trafficGmv > 0 && promo > 0 ? promo / trafficGmv : cur.adRate;
+    const prevAdRate =
+      (prev.trafficGMV || 0) > 0 && (prev.adCost || 0) > 0 ? prev.adCost / prev.trafficGMV : prev.adRate;
+    const aov =
+      buyers > 0 && trafficGmv > 0 ? trafficGmv / buyers : cur.ASP != null ? cur.ASP : shipAov;
+    const prevAov =
+      (prev.buyers || 0) > 0 && (prev.trafficGMV || 0) > 0
+        ? prev.trafficGMV / prev.buyers
+        : prev.ASP != null
+          ? prev.ASP
+          : prevShipAov;
+
     setText("execV0", formatInteger(totals.quantity));
     setText("execS0", `${context.currentLabel} · 有数据日 ${totals.dateCount} 天`);
     setExecTrendArrow("execT0", qtyGrowth.rate);
 
-    setText("execV1", formatMoney(totals.amount));
-    setText("execS1", "出货 GMV · 当前筛选");
-    setExecTrendArrow("execT1", mom.rate);
+    const shipGmv = totals.amount || 0;
+    const prevShipGmv = previousTotals.amount || 0;
+    const prevTrafficGmv = prev.trafficGMV || 0;
+    const gmvMom = trafficGmv > 0 && prevTrafficGmv > 0 ? calcGrowth(trafficGmv, prevTrafficGmv) : calcGrowth(shipGmv, prevShipGmv);
 
-    const dailyShip = totals.dateCount ? totals.quantity / totals.dateCount : 0;
-    setText("execV2", formatInteger(Math.round(dailyShip)));
-    setText("execS2", "件 / 有数据日");
-    setExecTrendArrow("execT2", NaN);
+    setText("execV1", formatInteger(Math.round(dailyShip)));
+    setText("execS1", "件 / 有数据日");
+    setExecTrendArrow("execT1", prevDailyShip > 0 ? calcGrowth(dailyShip, prevDailyShip).rate : NaN);
 
-    setText("execV3", formatGrowth(qtyGrowth.rate));
-    setText("execS3", `出货件数：${context.currentLabel} vs ${context.compareLabel}`);
-    setExecTrendArrow("execT3", qtyGrowth.rate);
+    setText("execV2", trafficGmv > 0 ? formatMoney(trafficGmv) : formatMoney(shipGmv));
+    setText(
+      "execS2",
+      trafficGmv > 0
+        ? `出货 GMV ${formatMoney(shipGmv)}`
+        : `出货 GMV · ${context.currentLabel}`,
+    );
+    setExecTrendArrow("execT2", gmvMom.rate);
 
-    setText("execV4", formatGrowth(mom.rate));
-    setText("execS4", `${context.currentLabel} vs ${context.compareLabel}`);
-    setExecTrendArrow("execT4", mom.rate);
+    setText("execV3", uv > 0 ? formatInteger(uv) : "—");
+    setText("execS3", uv > 0 ? `支付买家 ${formatInteger(buyers)}` : "未匹配到流量 UV");
+    setExecTrendArrow("execT3", prevUv > 0 ? calcGrowth(uv, prevUv).rate : NaN);
 
-    const trafficAov = tc?.aov;
-    setText("execV5", trafficAov != null && trafficAov > 0 ? formatMoney(trafficAov) : shipAov != null ? formatMoney(shipAov) : "—");
-    setText("execS5", trafficAov != null ? "流量 ASP（GMV÷支付买家数）" : "出货 GMV÷件数");
-    const aovMom =
-      trafficAov != null && tp?.aov > 0 ? calcGrowth(trafficAov, tp.aov) : prevShipAov > 0 && shipAov > 0 ? calcGrowth(shipAov, prevShipAov) : null;
-    setExecTrendArrow("execT5", aovMom ? aovMom.rate : NaN);
+    setText("execV4", cvr != null ? formatPercent(cvr) : "—");
+    setText("execS4", buyers > 0 && uv > 0 ? `买家 ${formatInteger(buyers)} ÷ UV ${formatInteger(uv)}` : "—");
+    setExecTrendArrow("execT4", cvr != null && prevCvr != null && prevCvr > 0 ? calcGrowth(cvr, prevCvr).rate : NaN);
 
-    const promo = tc?.promo > 0 ? tc.promo : 0;
-    const prevPromo = tp?.promo > 0 ? tp.promo : 0;
-    const trafficGmv = tc?.gmv > 0 ? tc.gmv : 0;
-    const adRate = promo > 0 && trafficGmv > 0 ? promo / trafficGmv : null;
+    setText("execV5", promo > 0 ? formatMoney(promo) : "—");
+    setText("execS5", trafficGmv > 0 ? `流量 GMV ${formatMoney(trafficGmv)}` : "无流量 GMV");
+    setExecTrendArrow("execT5", promo > 0 && prevPromo > 0 ? calcGrowth(promo, prevPromo).rate : NaN);
+
     setText("execV6", adRate != null ? formatPercent(adRate) : "—");
-    setText("execS6", promo > 0 ? `推广费 ${formatMoney(promo)}` : "无推广费或无法匹配");
-    const spendMom = promo > 0 && prevPromo > 0 ? calcGrowth(promo, prevPromo) : null;
-    setExecTrendArrow("execT6", spendMom ? spendMom.rate : NaN);
+    setText("execS6", promo > 0 ? `推广费 ${formatMoney(promo)}` : "无推广费");
+    setExecTrendArrow("execT6", adRate != null && prevAdRate != null && prevAdRate > 0 ? calcGrowth(adRate, prevAdRate).rate : NaN);
 
-    const roi = promo > 0 && trafficGmv > 0 ? trafficGmv / promo : null;
-    setText("execV7", formatRoiMultiple(roi));
-    setText("execS7", "流量 GMV ÷ 推广费用");
-    setExecTrendArrow("execT7", NaN);
+    setText("execV7", aov != null && aov > 0 ? formatMoney(aov) : "—");
+    setText(
+      "execS7",
+      buyers > 0 ? "流量 GMV ÷ 支付买家数" : shipAov != null ? "出货 GMV ÷ 出货件数" : "—",
+    );
+    setExecTrendArrow("execT7", aov != null && prevAov > 0 ? calcGrowth(aov, prevAov).rate : NaN);
 
     renderExecTrendCharts(context);
     renderExecDiagnosis(context);
