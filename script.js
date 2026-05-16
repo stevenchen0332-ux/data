@@ -1432,6 +1432,12 @@
     return tail;
   }
 
+  function trafficDailySeriesAligned(context, which) {
+    const tr = context.traffic;
+    if (!tr) return [];
+    return which === "prev" ? tr.prevDailySeries || [] : tr.curDailySeries || [];
+  }
+
   function renderExecTrendCharts(context) {
     const shipCur = aggregateDailyWithTraffic(context.filteredRecords).slice(-30);
     const trafficCur = trafficDailySeriesAligned(context, "cur").slice(-30);

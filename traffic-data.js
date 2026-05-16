@@ -255,7 +255,7 @@
 
   async function loadTrafficDaily() {
     try {
-      const res = await fetch("./data/traffic_daily.json?v=20260516g");
+      const res = await fetch("./data/traffic_daily.json?v=20260516h");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const raw = await res.json();
       trafficState.rows = raw.map((row) => ({
