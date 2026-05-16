@@ -465,8 +465,8 @@
     setKpiRow({
       valueId: "ttlTrafficKpiUv",
       subId: "ttlTrafficKpiUvSub",
-      cur: cur.uv,
-      prev: p.uv,
+      cur: cur.uv > 0 ? cur.uv : NaN,
+      prev: p.uv > 0 ? p.uv : NaN,
       higherIsBetter: true,
       fmt: formatInt,
     });
@@ -491,8 +491,8 @@
     setKpiRow({
       valueId: "ttlTrafficKpiPromo",
       subId: "ttlTrafficKpiPromoSub",
-      cur: cur.promo,
-      prev: p.promo,
+      cur: cur.promo > 0 ? cur.promo : NaN,
+      prev: p.promo > 0 ? p.promo : NaN,
       higherIsBetter: false,
       fmt: formatMoney,
     });

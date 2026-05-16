@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>太太乐全渠道经营驾驶舱</title>
-    <link rel="stylesheet" href="./style.css?v=20260516d" />
-    <link rel="stylesheet" href="./ttl-traffic.css?v=20260516d" />
-    <link rel="stylesheet" href="./cockpit-layout.css?v=20260516d" />
+    <link rel="stylesheet" href="./style.css?v=20260516e" />
+    <link rel="stylesheet" href="./ttl-traffic.css?v=20260516e" />
+    <link rel="stylesheet" href="./cockpit-layout.css?v=20260516e" />
   </head>
   <body>
     <div class="app-shell">
@@ -130,6 +130,8 @@
                 <div id="channelFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
               </div>
             </div>
+          </div>
+          <div class="cockpit-filter-row-dims">
             <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact">
               <label for="categoryFilterTrigger">品类</label>
               <div class="multi-dropdown-root">
@@ -187,17 +189,15 @@
                 <div id="regionFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
               </div>
             </div>
+            <div class="filter-field search-field filter-field-search-inline cockpit-filter-search">
+              <label for="productSearch">商品搜索</label>
+              <input id="productSearch" type="search" placeholder="商品名或编码" disabled />
+            </div>
             <div class="cockpit-filter-actions">
               <button id="resetFiltersBtn" class="ghost-button" type="button">重置</button>
               <button id="cockpitApplyFiltersBtn" type="button" class="primary-button">查询</button>
             </div>
-          </div>
-          <div class="cockpit-filter-row-secondary">
-            <div class="filter-field search-field filter-field-search-inline">
-              <label for="productSearch">商品搜索</label>
-              <input id="productSearch" type="search" placeholder="商品名或编码" disabled />
-            </div>
-            <div class="filter-field optional-filter hidden" id="brandFilterWrap">
+            <div class="filter-field optional-filter hidden cockpit-filter-brand" id="brandFilterWrap">
               <label for="brandFilter">品牌</label>
               <select id="brandFilter" disabled>
                 <option value="all">全部品牌</option>
@@ -274,9 +274,9 @@
                   <div id="execT4" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
                 <article class="cockpit-exec-card">
-                  <span class="cockpit-exec-label">毛利率</span>
+                  <span class="cockpit-exec-label">客单价（AOV）</span>
                   <strong id="execV5" class="cockpit-exec-value">-</strong>
-                  <div id="execS5" class="cockpit-exec-sub">需成本表接入</div>
+                  <div id="execS5" class="cockpit-exec-sub">GMV ÷ 出货件数</div>
                   <div id="execT5" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
                 <article class="cockpit-exec-card">
@@ -291,18 +291,7 @@
                   <div id="execS7" class="cockpit-exec-sub">GMV / 推广费</div>
                   <div id="execT7" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
                 </article>
-                <article class="cockpit-exec-card">
-                  <span class="cockpit-exec-label">转化率（订单/访客）</span>
-                  <strong id="execV8" class="cockpit-exec-value">-</strong>
-                  <div id="execS8" class="cockpit-exec-sub">访客来自可选运营字段</div>
-                  <div id="execT8" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
-                </article>
-                <article class="cockpit-exec-card">
-                  <span class="cockpit-exec-label">客单价（GMV/访客）</span>
-                  <strong id="execV9" class="cockpit-exec-value">-</strong>
-                  <div id="execS9" class="cockpit-exec-sub">无访客时退化为 GMV/件</div>
-                  <div id="execT9" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
-                </article>
+
               </div>
 
               <div class="cockpit-exec-trends">
@@ -318,12 +307,12 @@
                 </article>
                 <article class="cockpit-exec-trend-card">
                   <h4>流量趋势（UV）</h4>
-                  <p class="cockpit-exec-trend-hint">访客为 0 时显示占位</p>
+                  <p class="cockpit-exec-trend-hint">来自流量日表；UV=0 当日不画点</p>
                   <div id="execTrendUv" class="cockpit-exec-chart"></div>
                 </article>
                 <article class="cockpit-exec-trend-card">
                   <h4>转化率趋势</h4>
-                  <p class="cockpit-exec-trend-hint">订单量 ÷ 访客（按日）</p>
+                  <p class="cockpit-exec-trend-hint">出货件数 ÷ UV（按日）</p>
                   <div id="execTrendCvr" class="cockpit-exec-chart"></div>
                 </article>
               </div>
@@ -466,11 +455,7 @@
                   <strong id="ttlTrafficKpiRoi" class="ttl-traffic__kpi-value">-</strong>
                   <div id="ttlTrafficKpiRoiSub" class="ttl-traffic__kpi-meta"></div>
                 </div>
-                <div class="ttl-traffic__kpi-card">
-                  <span class="ttl-traffic__kpi-label">退款率</span>
-                  <strong id="ttlTrafficKpiRefund" class="ttl-traffic__kpi-value">-</strong>
-                  <div id="ttlTrafficKpiRefundSub" class="ttl-traffic__kpi-meta"></div>
-                </div>
+</div>
               </div>
 
               <div class="ttl-traffic__grid-2">
@@ -489,30 +474,6 @@
                   <div id="ttlTrafficDualAxisChart" class="ttl-traffic__chart ttl-traffic__chart--tall"></div>
                 </div>
               </div>
-
-              <div class="ttl-traffic__eff-grid" aria-label="投放效率">
-                <div class="ttl-traffic__eff-card">
-                  <div class="ttl-traffic__eff-label">推广费用</div>
-                  <div id="ttlEffPromo" class="ttl-traffic__eff-value">-</div>
-                  <div class="ttl-traffic__eff-note">当前筛选周期合计</div>
-                </div>
-                <div class="ttl-traffic__eff-card">
-                  <div class="ttl-traffic__eff-label">ROI</div>
-                  <div id="ttlEffRoi" class="ttl-traffic__eff-value">-</div>
-                  <div class="ttl-traffic__eff-note">GMV / 推广费用</div>
-                </div>
-                <div class="ttl-traffic__eff-card">
-                  <div class="ttl-traffic__eff-label">费比</div>
-                  <div id="ttlEffFeeRatio" class="ttl-traffic__eff-value">-</div>
-                  <div class="ttl-traffic__eff-note">推广费用 / GMV</div>
-                </div>
-                <div class="ttl-traffic__eff-card">
-                  <div class="ttl-traffic__eff-label">推广 GMV 占比</div>
-                  <div id="ttlEffPromoGmv" class="ttl-traffic__eff-value">-</div>
-                  <div id="ttlEffPromoGmvNote" class="ttl-traffic__eff-note">-</div>
-                </div>
-              </div>
-
               <div class="ttl-traffic__diag">
                 <h4>自动经营诊断</h4>
                 <ul id="ttlTrafficDiagList"></ul>
@@ -775,18 +736,18 @@
                 <strong id="trafficKpiVisitors">-</strong>
                 <span id="trafficKpiVisitorsSub" class="kpi-sub">-</span>
               </article>
-              <article class="kpi-card">
+              <article class="kpi-card" id="trafficKpiImpressionsCard">
                 <span class="kpi-label">累计曝光</span>
                 <strong id="trafficKpiImpressions">-</strong>
                 <span class="kpi-sub">当前筛选范围内求和</span>
               </article>
-              <article class="kpi-card">
+              <article class="kpi-card" id="trafficKpiClicksCard">
                 <span class="kpi-label">累计点击</span>
                 <strong id="trafficKpiClicks">-</strong>
                 <span class="kpi-sub">当前筛选范围内求和</span>
               </article>
-              <article class="kpi-card">
-                <span class="kpi-label">转化率 / 点击密度</span>
+              <article class="kpi-card" id="trafficKpiCvrCard">
+                <span class="kpi-label">CVR（出货件数/UV）</span>
                 <strong id="trafficKpiConv">-</strong>
                 <span id="trafficKpiConvSub" class="kpi-sub">-</span>
               </article>
@@ -795,12 +756,12 @@
             <div class="chart-grid two-col">
               <article class="chart-card">
                 <div class="card-title">
-                  <h4>每日访客与点击</h4>
+                  <h4 id="trafficDailyChartTitle">每日访客趋势</h4>
                   <span>与出货日历对齐的日粒度汇总</span>
                 </div>
                 <div id="trafficDailyChart" class="chart tall-chart"></div>
               </article>
-              <article class="chart-card">
+              <article class="chart-card" id="trafficChannelChartCard">
                 <div class="card-title">
                   <h4>渠道访客 TOP</h4>
                   <span>按访客数排序（有数据时）</span>
@@ -865,8 +826,9 @@
       crossorigin="anonymous"
       onerror="this.onerror=null;this.src='./papaparse.min.js'"
     ></script>
-    <script src="./data-bundle.js?v=20260516d"></script>
-    <script src="./script.js?v=20260516d"></script>
-    <script src="./ttl-traffic-panel.js?v=20260516d"></script>
+    <script src="./data-bundle.js?v=20260516e"></script>
+    <script src="./traffic-data.js?v=20260516e"></script>
+    <script src="./script.js?v=20260516e"></script>
+    <script src="./ttl-traffic-panel.js?v=20260516e"></script>
   </body>
 </html>

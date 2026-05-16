@@ -75,11 +75,14 @@
 
   const els = {};
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
     cacheDom();
     bindEvents();
     closeAllMultiDropdowns();
     renderEmptyState();
+    if (window.TTL_TRAFFIC_DATA && window.TTL_TRAFFIC_DATA.loadTrafficDaily) {
+      await window.TTL_TRAFFIC_DATA.loadTrafficDaily();
+    }
     if (!window.echarts) {
       showFieldStatus([
         {
@@ -1196,6 +1199,7 @@
     });
 
     const context = buildContext(filteredRecords, comparisonRecords);
+    enrichContextWithTraffic(context);
 
     els.emptyState.classList.add("hidden");
     els.dashboardContent.classList.remove("hidden");
@@ -1318,6 +1322,51 @@
     };
   }
 
+  function getTrafficFilterSets() {
+    return {
+      channelSet: readMultiFilter(els.channelFilter),
+      storeSet: readMultiFilter(els.storeFilter),
+    };
+  }
+
+  function enrichContextWithTraffic(context) {
+    const mod = window.TTL_TRAFFIC_DATA;
+    if (!mod || !mod.loaded) {
+      context.traffic = null;
+      return;
+    }
+    context.traffic = mod.buildTrafficContext(context, getTrafficFilterSets);
+  }
+
+  function formatRoiMultiple(value) {
+    if (!Number.isFinite(value) || value <= 0) return "—";
+    return `${value.toFixed(2)}×`;
+  }
+
+  function aggregateDailyExecutive(records, trafficDailyMap) {
+    const map = new Map();
+    records.forEach((r) => {
+      if (!r.dateKey) return;
+      if (!map.has(r.dateKey)) {
+        map.set(r.dateKey, { date: r.dateKey, amount: 0, quantity: 0 });
+      }
+      const d = map.get(r.dateKey);
+      d.amount += r.amount;
+      d.quantity += r.quantity;
+    });
+    return Array.from(map.values())
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((d) => {
+        const tv = trafficDailyMap && trafficDailyMap.get(d.date);
+        const uv = tv ? Number(tv.uv) || 0 : 0;
+        return {
+          ...d,
+          uv,
+          cvr: uv > 0 ? d.quantity / uv : null,
+        };
+      });
+  }
+
   function updateMeta(context) {
     const allDates = state.allRecords.map((record) => record.dateKey).sort();
     const start = allDates[0] || "-";
@@ -1384,13 +1433,18 @@
   }
 
   function renderExecTrendCharts(context) {
-    const cur = aggregateDailyWithTraffic(context.filteredRecords).slice(-30);
+    const trafficDaily = context.traffic?.curDaily;
+    const prevTrafficDaily = context.traffic?.prevDaily;
+    const cur = aggregateDailyExecutive(context.filteredRecords, trafficDaily).slice(-30);
     const ids = ["execTrendShipment", "execTrendGmv", "execTrendUv", "execTrendCvr"];
     if (!cur.length) {
       ids.forEach((id) => setChart(id, emptyChartOption("暂无数据")));
       return;
     }
-    const prevArr = padSeriesTail(aggregateDailyWithTraffic(context.previousMonthRecords), cur.length);
+    const prevArr = padSeriesTail(
+      aggregateDailyExecutive(context.previousMonthRecords, prevTrafficDaily),
+      cur.length,
+    );
     const x = cur.map((d) => d.date.slice(5));
     const line = (nameCur, curData, namePrev, prevData, axisFmt) => ({
       ...baseChartOption(),
@@ -1446,10 +1500,17 @@
         compactAxis,
       ),
     );
-    const uvCur = cur.map((d) => round2(d.visitors));
-    const hasUv = uvCur.some((v) => v > 0);
+    const uvCur = cur.map((d) => (d.uv > 0 ? round2(d.uv) : null));
+    const hasUv = uvCur.some((v) => v != null && v > 0);
     if (!hasUv) {
-      setChart("execTrendUv", emptyChartOption("当前数据包无 UV/访客字段或全为 0"));
+      setChart(
+        "execTrendUv",
+        emptyChartOption(
+          context.traffic?.hasUv === false
+            ? "当前筛选下无流量 UV 数据（请确认 traffic_daily.json 已加载）"
+            : "UV 为空或全为 0",
+        ),
+      );
     } else {
       setChart(
         "execTrendUv",
@@ -1457,7 +1518,7 @@
           "本期 UV",
           uvCur,
           "对比期 UV",
-          prevArr.map((p) => (p ? round2(p.visitors) : null)),
+          prevArr.map((p) => (p && p.uv > 0 ? round2(p.uv) : null)),
           compactAxis,
         ),
       );
@@ -1466,10 +1527,10 @@
       "execTrendCvr",
       line(
         "本期转化率 %",
-        cur.map((d) => round2(d.cvr * 100)),
+        cur.map((d) => (d.cvr != null ? round2(d.cvr * 100) : null)),
         "对比期 %",
-        prevArr.map((p) => (p ? round2(p.cvr * 100) : null)),
-        (v) => `${v}%`,
+        prevArr.map((p) => (p && p.cvr != null ? round2(p.cvr * 100) : null)),
+        (v) => (v == null ? "" : `${v}%`),
       ),
     );
   }
@@ -1482,36 +1543,35 @@
       renderList(list, ["对比期或当前筛选下数据不足，暂无法生成诊断。"]);
       return;
     }
-    const uv0 = sumMetricRecords(filteredRecords, "visitors");
-    const uv1 = sumMetricRecords(previousMonthRecords, "visitors");
+    const tr = context.traffic;
+    const uv0 = tr?.cur?.uv > 0 ? tr.cur.uv : 0;
+    const uv1 = tr?.prev?.uv > 0 ? tr.prev.uv : 0;
     const uvMom = uv1 > 0 ? (uv0 - uv1) / uv1 : NaN;
-    const ord0 = sumMetricRecords(filteredRecords, "orderCount");
-    const ord1 = sumMetricRecords(previousMonthRecords, "orderCount");
-    const cvr0 = uv0 > 0 ? ord0 / uv0 : 0;
-    const cvr1 = uv1 > 0 ? ord1 / uv1 : 0;
-    const aov0 = uv0 > 0 ? totals.amount / uv0 : totals.quantity ? totals.amount / totals.quantity : 0;
-    const aov1 = uv1 > 0 ? previousTotals.amount / uv1 : previousTotals.quantity ? previousTotals.amount / previousTotals.quantity : 0;
+    const cvr0 = uv0 > 0 ? totals.quantity / uv0 : NaN;
+    const cvr1 = uv1 > 0 ? previousTotals.quantity / uv1 : NaN;
+    const aov0 = totals.quantity > 0 ? totals.amount / totals.quantity : NaN;
+    const aov1 = previousTotals.quantity > 0 ? previousTotals.amount / previousTotals.quantity : NaN;
     const qtyMom = calcGrowth(currentTotals.quantity, previousTotals.quantity);
-    const spend0 = sumMetricRecords(filteredRecords, "promotionSpend");
-    const spend1 = sumMetricRecords(previousMonthRecords, "promotionSpend");
+    const spend0 = tr?.cur?.promo > 0 ? tr.cur.promo : 0;
+    const spend1 = tr?.prev?.promo > 0 ? tr.prev.promo : 0;
     const roi0 = spend0 > 0 ? totals.amount / spend0 : 0;
     const roi1 = spend1 > 0 ? previousTotals.amount / spend1 : 0;
 
     const bullets = [];
-    if (mom.rate < -0.02 && Number.isFinite(uvMom) && Math.abs(uvMom) < 0.04 && cvr0 < cvr1 * 0.97) {
+    if (mom.rate < -0.02 && Number.isFinite(uvMom) && Math.abs(uvMom) < 0.04 && Number.isFinite(cvr0) && Number.isFinite(cvr1) && cvr0 < cvr1 * 0.97) {
       bullets.push("GMV 走弱而 UV 变化不大，转化率相对对比期偏低 → 优先排查承接与转化（活动、库存、页面路径）。");
     }
     if (mom.rate < -0.02 && Number.isFinite(uvMom) && uvMom < -0.05) {
       bullets.push("UV 明显下滑带动 GMV → 结合下方渠道/投放结构，检查主要流量入口是否收缩。");
     }
-    if (mom.rate < -0.02 && aov0 < aov1 * 0.95 && Math.abs((cvr0 || 0) - (cvr1 || 0)) < 0.02) {
+    if (mom.rate < -0.02 && Number.isFinite(aov0) && Number.isFinite(aov1) && aov0 < aov1 * 0.95 && Number.isFinite(cvr0) && Number.isFinite(cvr1) && Math.abs(cvr0 - cvr1) < 0.02) {
       bullets.push("客单价下行是主因，转化率相对稳定 → 关注折扣深度、件单价与品类组合。");
     }
     if (spend0 > 0 && roi0 > 0 && roi1 > 0 && roi0 < roi1 * 0.9) {
       bullets.push("ROI 走弱，单位推广产出下降 → 收紧低效花费并复盘高费低产渠道。");
     }
     if (mom.rate < -0.02 && qtyMom.rate > -0.02) {
-      bullets.push("GMV 下行但出货件数未同步走弱 → 留意退款、口径差异或低价冲量带来的 GMV 风险。");
+      bullets.push("GMV 下行但出货件数未同步走弱 → 留意口径差异或低价冲量带来的 GMV 风险。");
     }
     if (bullets.length < 3) {
       bullets.push(
@@ -1524,8 +1584,12 @@
   function renderExecutiveCockpit(context) {
     if (!document.getElementById("execV0")) return;
     const { totals, currentTotals, previousTotals, mom, filteredRecords } = context;
+    const tr = context.traffic;
+    const spend = tr?.cur?.promo > 0 ? tr.cur.promo : 0;
+    const prevSpend = tr?.prev?.promo > 0 ? tr.prev.promo : 0;
+
     if (!filteredRecords.length) {
-      for (let i = 0; i < 10; i += 1) {
+      for (let i = 0; i < 8; i += 1) {
         setText(`execV${i}`, "—");
         setText(`execS${i}`, "");
         setExecTrendArrow(`execT${i}`, NaN);
@@ -1538,21 +1602,8 @@
     }
 
     const qtyGrowth = calcGrowth(currentTotals.quantity, previousTotals.quantity);
-    const spend = sumMetricRecords(filteredRecords, "promotionSpend");
-    const visitors = sumMetricRecords(filteredRecords, "visitors");
-    const prevSpend = sumMetricRecords(context.previousMonthRecords, "promotionSpend");
-    const prevVisitors = sumMetricRecords(context.previousMonthRecords, "visitors");
-    const orders = sumMetricRecords(filteredRecords, "orderCount");
-    const cvr = visitors > 0 ? orders / visitors : 0;
-    const prevOrders = sumMetricRecords(context.previousMonthRecords, "orderCount");
-    const prevCvr = prevVisitors > 0 ? prevOrders / prevVisitors : 0;
-    const aovTraffic = visitors > 0 ? totals.amount / visitors : totals.avgPrice || 0;
-    const prevAov =
-      prevVisitors > 0
-        ? previousTotals.amount / prevVisitors
-        : previousTotals.quantity
-          ? previousTotals.amount / previousTotals.quantity
-          : 0;
+    const aov = totals.quantity > 0 ? totals.amount / totals.quantity : null;
+    const prevAov = previousTotals.quantity > 0 ? previousTotals.amount / previousTotals.quantity : null;
 
     setText("execV0", formatInteger(totals.quantity));
     setText("execS0", `${context.currentLabel} · 有数据日 ${totals.dateCount} 天`);
@@ -1575,29 +1626,21 @@
     setText("execS4", `${context.currentLabel} vs ${context.compareLabel}`);
     setExecTrendArrow("execT4", mom.rate);
 
-    setText("execV5", "—");
-    setText("execS5", "需接入成本/毛利字段");
-    setExecTrendArrow("execT5", NaN);
+    setText("execV5", aov != null ? formatMoney(aov) : "—");
+    setText("execS5", totals.quantity > 0 ? `GMV ${formatMoney(totals.amount)} / ${formatInteger(totals.quantity)} 件` : "—");
+    const aovMom = aov != null && prevAov != null && prevAov > 0 ? calcGrowth(aov, prevAov) : null;
+    setExecTrendArrow("execT5", aovMom ? aovMom.rate : NaN);
 
-    const adRate = totals.amount > 0 && spend > 0 ? spend / totals.amount : null;
+    const adRate = spend > 0 && totals.amount > 0 ? spend / totals.amount : null;
     setText("execV6", adRate != null ? formatPercent(adRate) : "—");
-    setText("execS6", spend > 0 ? `推广费 ${formatMoney(spend)}` : "无推广费或全为 0");
+    setText("execS6", spend > 0 ? `推广费 ${formatMoney(spend)}` : "无推广费或无法匹配");
     const spendMom = spend > 0 && prevSpend > 0 ? calcGrowth(spend, prevSpend) : null;
     setExecTrendArrow("execT6", spendMom ? spendMom.rate : NaN);
 
     const roi = spend > 0 ? totals.amount / spend : null;
-    setText("execV7", roi != null ? `${roi.toFixed(2)}×` : "—");
-    setText("execS7", "GMV ÷ 推广费");
+    setText("execV7", formatRoiMultiple(roi));
+    setText("execS7", "GMV ÷ 推广费用");
     setExecTrendArrow("execT7", NaN);
-
-    setText("execV8", visitors > 0 ? formatPercent(cvr) : "—");
-    setText("execS8", visitors > 0 ? `订单 ${formatInteger(orders)} / UV ${formatInteger(visitors)}` : "无访客数据");
-    setExecTrendArrow("execT8", prevCvr > 1e-8 ? (cvr - prevCvr) / prevCvr : NaN);
-
-    setText("execV9", formatMoney(aovTraffic));
-    setText("execS9", visitors > 0 ? "GMV / UV" : "GMV / 出货件数");
-    const aovMom = prevAov > 0 && aovTraffic > 0 ? calcGrowth(aovTraffic, prevAov) : null;
-    setExecTrendArrow("execT9", aovMom ? aovMom.rate : NaN);
 
     renderExecTrendCharts(context);
     renderExecDiagnosis(context);
@@ -2678,76 +2721,152 @@
       .sort((a, b) => b.visitors - a.visitors || b.impressions - a.impressions || b.clicks - a.clicks);
   }
 
+  function setTrafficCardVisible(id, visible) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("hidden", !visible);
+  }
+
+  function trafficDailyFromContext(context) {
+    const ship = aggregateDailyExecutive(context.filteredRecords, context.traffic?.curDaily);
+    return ship.map((d) => ({
+      date: d.date.slice(5),
+      dateKey: d.date,
+      visitors: d.uv,
+      quantity: d.quantity,
+      amount: d.amount,
+      cvr: d.cvr,
+    }));
+  }
+
+  function aggregateTrafficChannelFromJson(context) {
+    const rows = context.traffic?.curRows || [];
+    const map = new Map();
+    rows.forEach((row) => {
+      const name = row.platform || row.shop || "未命名";
+      if (!map.has(name)) map.set(name, { name, visitors: 0 });
+      map.get(name).visitors += Number(row.uv) || 0;
+    });
+    return Array.from(map.values())
+      .filter((r) => r.visitors > 0)
+      .sort((a, b) => b.visitors - a.visitors);
+  }
+
   function renderTraffic(context) {
     const records = context.filteredRecords || [];
-    const sums = sumTrafficFromRecords(records);
-    const hasTraffic =
-      sums.visitors > 0 || sums.impressions > 0 || sums.clicks > 0 || sums.pageViews > 0;
-    const dateKeys = new Set(records.map((r) => r.dateKey).filter(Boolean));
-    const dayCount = dateKeys.size || 0;
+    const tr = context.traffic;
+    const totals = context.totals;
+    const uv = tr?.cur?.uv > 0 ? tr.cur.uv : 0;
+    const promo = tr?.cur?.promo > 0 ? tr.cur.promo : 0;
+    const gmv = totals?.amount || 0;
+    const qty = totals?.quantity || 0;
 
-    if (!hasTraffic) {
+    const bundleSums = sumTrafficFromRecords(records);
+    const hasImpressions = bundleSums.impressions > 0;
+    const hasClicks = bundleSums.clicks > 0;
+    const hasUv = uv > 0;
+
+    setTrafficCardVisible("trafficKpiImpressionsCard", hasImpressions);
+    setTrafficCardVisible("trafficKpiClicksCard", hasClicks);
+    setTrafficCardVisible("trafficKpiCvrCard", hasUv && qty > 0);
+
+    const titleEl = document.getElementById("trafficDailyChartTitle");
+    if (titleEl) titleEl.textContent = hasClicks ? "每日访客与点击" : "每日访客趋势";
+
+    const channelCard = document.getElementById("trafficChannelChartCard");
+    const byChannelJson = hasUv ? aggregateTrafficChannelFromJson(context) : [];
+    if (channelCard) channelCard.classList.toggle("hidden", !byChannelJson.length);
+
+    if (!hasUv && !hasImpressions && !hasClicks) {
       setText(
         "trafficConclusion",
-        "当前筛选下无可用流量汇总（数据包未携带访客/曝光/点击等可选指标，或汇总为 0）。出货与其他模块不受影响。",
+        "当前筛选下无可用流量 UV（请确认已加载 data/traffic_daily.json，且渠道/店铺筛选可匹配）。出货看板不受影响。",
       );
       setText("trafficKpiVisitors", "—");
-      setText("trafficKpiVisitorsSub", "无 UV / PV 汇总");
+      setText("trafficKpiVisitorsSub", "无 UV 汇总");
       setText("trafficKpiImpressions", "—");
       setText("trafficKpiClicks", "—");
       setText("trafficKpiConv", "—");
-      setText("trafficKpiConvSub", "无点击率或转化率可算");
-      setChart("trafficDailyChart", emptyChartOption("暂无流量日序数据（指标为空或全为 0）"));
-      setChart("trafficChannelChart", emptyChartOption("暂无渠道流量对比"));
+      setText("trafficKpiConvSub", "—");
+      setChart("trafficDailyChart", emptyChartOption("暂无流量日序数据"));
+      setChart("trafficChannelChart", emptyChartOption("暂无渠道访客数据"));
       return;
     }
 
-    const daily = aggregateTrafficDailySeries(records);
-    const byChannel = aggregateTrafficByChannel(records).slice(0, 15);
+    const dateKeys = new Set(records.map((r) => r.dateKey).filter(Boolean));
+    const dayCount = dateKeys.size || 0;
+    const daily = trafficDailyFromContext(context);
 
-    setText("trafficKpiVisitors", formatInteger(sums.visitors));
-    const pvLine =
-      sums.pageViews > 0
-        ? `累计 PV（浏览量）${formatInteger(sums.pageViews)}；日均访客 ${dayCount ? formatInteger(sums.visitors / dayCount) : "—"}`
-        : `访客即 UV 口径汇总；日均访客 ${dayCount ? formatInteger(sums.visitors / dayCount) : "—"}`;
-    setText("trafficKpiVisitorsSub", pvLine);
-
-    setText("trafficKpiImpressions", formatInteger(sums.impressions));
-    setText("trafficKpiClicks", formatInteger(sums.clicks));
-
-    let convMain = "—";
-    let convSub = "—";
-    if (sums.impressions > 0) {
-      convMain = formatPercent(sums.clicks / sums.impressions);
-      convSub = "点击率（点击 / 曝光）";
-    } else if (sums.visitors > 0 && sums.clicks > 0) {
-      convMain = formatPercent(sums.clicks / sums.visitors);
-      convSub = "点击 / 访客（无曝光列时）";
-    }
-    if (sums.convWeight > 0 && sums.convNumerator > 0) {
-      const w = sums.convNumerator / sums.convWeight;
-      if (sums.impressions <= 0) {
-        convMain = formatPercent(w);
-        convSub = "行加权平均转化率（按访客数加权）";
-      } else if (sums.clicks <= 0) {
-        convMain = formatPercent(w);
-        convSub = "行加权平均转化率（曝光存在但点击为 0 时）";
-      }
-    }
-    setText("trafficKpiConv", convMain);
-    setText("trafficKpiConvSub", convSub);
-
-    const topCh = byChannel[0];
-    const parts = [];
-    parts.push(
-      `${context.currentLabel || "当前筛选"}：访客 ${formatInteger(sums.visitors)}，曝光 ${formatInteger(sums.impressions)}，点击 ${formatInteger(sums.clicks)}。`,
+    setText("trafficKpiVisitors", hasUv ? formatInteger(uv) : "—");
+    setText(
+      "trafficKpiVisitorsSub",
+      hasUv && dayCount ? `日均访客 ${formatInteger(uv / dayCount)}` : "—",
     );
-    if (topCh) parts.push(`访客最多的渠道为「${topCh.name}」。`);
-    setText("trafficConclusion", parts.join(""));
 
-    if (!daily.length) {
-      setChart("trafficDailyChart", emptyChartOption("暂无按日流量数据"));
+    if (hasImpressions) setText("trafficKpiImpressions", formatInteger(bundleSums.impressions));
+    if (hasClicks) setText("trafficKpiClicks", formatInteger(bundleSums.clicks));
+
+    if (hasUv && qty > 0) {
+      const cvr = qty / uv;
+      setText("trafficKpiConv", formatPercent(cvr));
+      setText("trafficKpiConvSub", `出货 ${formatInteger(qty)} 件 ÷ UV ${formatInteger(uv)}`);
     } else {
+      setText("trafficKpiConv", "—");
+      setText("trafficKpiConvSub", "—");
+    }
+
+    const parts = [];
+    if (hasUv) parts.push(`${context.currentLabel || "当前筛选"}：UV ${formatInteger(uv)}`);
+    if (gmv > 0) parts.push(`GMV ${formatMoney(gmv)}`);
+    if (promo > 0) {
+      parts.push(`推广费 ${formatMoney(promo)}，ROI ${formatRoiMultiple(gmv / promo)}`);
+    }
+    if (byChannelJson[0]) parts.push(`访客最多的渠道为「${byChannelJson[0].name}」。`);
+    setText("trafficConclusion", parts.length ? parts.join("；") + "。" : "—");
+
+    if (!daily.length || !hasUv) {
+      setChart("trafficDailyChart", emptyChartOption("暂无按日 UV 数据"));
+    } else {
+      const series = [
+        {
+          name: "访客(UV)",
+          type: "line",
+          smooth: true,
+          yAxisIndex: 0,
+          showSymbol: false,
+          lineStyle: { width: 2, color: COLORS.primary },
+          data: daily.map((item) => (item.visitors > 0 ? round2(item.visitors) : null)),
+        },
+      ];
+      const yAxis = [
+        {
+          type: "value",
+          name: "访客",
+          axisLabel: { color: COLORS.muted, formatter: compactAxis },
+          splitLine: { lineStyle: { color: COLORS.grid } },
+        },
+      ];
+      if (hasClicks && bundleSums.clicks > 0) {
+        yAxis.push({
+          type: "value",
+          name: "点击",
+          position: "right",
+          axisLabel: { color: COLORS.muted, formatter: compactAxis },
+          splitLine: { show: false },
+        });
+        const clickDaily = aggregateTrafficDailySeries(records);
+        series.push({
+          name: "点击",
+          type: "line",
+          smooth: true,
+          yAxisIndex: 1,
+          showSymbol: false,
+          lineStyle: { width: 2, color: COLORS.warning },
+          data: daily.map((item) => {
+            const row = clickDaily.find((d) => d.date === item.dateKey || d.date === item.date);
+            return row && row.clicks > 0 ? round2(row.clicks) : null;
+          }),
+        });
+      }
       setChart(
         "trafficDailyChart",
         {
@@ -2760,47 +2879,22 @@
             data: daily.map((item) => item.date),
             axisLabel: { color: COLORS.muted },
           },
-          yAxis: [
-            {
-              type: "value",
-              name: "访客",
-              axisLabel: { color: COLORS.muted, formatter: compactAxis },
-              splitLine: { lineStyle: { color: COLORS.grid } },
-            },
-            {
-              type: "value",
-              name: "点击",
-              position: "right",
-              axisLabel: { color: COLORS.muted, formatter: compactAxis },
-              splitLine: { show: false },
-            },
-          ],
-          series: [
-            {
-              name: "访客(UV)",
-              type: "line",
-              smooth: true,
-              yAxisIndex: 0,
-              showSymbol: false,
-              lineStyle: { width: 2, color: COLORS.primary },
-              data: daily.map((item) => round2(item.visitors)),
-            },
-            {
-              name: "点击",
-              type: "line",
-              smooth: true,
-              yAxisIndex: 1,
-              showSymbol: false,
-              lineStyle: { width: 2, color: COLORS.warning },
-              data: daily.map((item) => round2(item.clicks)),
-            },
-          ],
+          yAxis,
+          series,
         },
-        (params) => linkDateFilter(params.name),
+        (params) => {
+          const idx = params?.dataIndex;
+          const row = daily[idx];
+          if (row?.dateKey) linkDateFilter(row.dateKey);
+        },
       );
     }
 
-    renderHorizontalNumberBar("trafficChannelChart", byChannel, "访客(UV)", "visitors", linkChannelFilter);
+    if (byChannelJson.length) {
+      renderHorizontalNumberBar("trafficChannelChart", byChannelJson, "访客(UV)", "visitors", linkChannelFilter);
+    } else {
+      setChart("trafficChannelChart", emptyChartOption("暂无渠道访客数据"));
+    }
   }
 
   function renderRecommendation(context) {

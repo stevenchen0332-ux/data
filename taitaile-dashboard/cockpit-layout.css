@@ -41,6 +41,38 @@
   border: 1px solid var(--border);
 }
 
+
+.cockpit-filter-row-dims {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
+  width: 100%;
+  padding-top: 6px;
+  border-top: 1px solid rgba(219, 227, 239, 0.85);
+}
+
+.cockpit-filter-row-dims .filter-field {
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.cockpit-filter-search {
+  flex: 1 1 240px;
+  max-width: 360px;
+  min-width: 200px;
+}
+
+.cockpit-filter-row-dims .cockpit-filter-compact {
+  width: min(148px, 20vw);
+  max-width: 168px;
+}
+
+.cockpit-filter-brand {
+  display: none;
+}
+
 .cockpit-filter-row-main {
   display: flex;
   flex-wrap: wrap;
@@ -205,7 +237,7 @@
 }
 
 .cockpit-filter-bar {
-  max-height: 118px;
+  max-height: 148px;
   overflow: visible;
 }
 
@@ -230,7 +262,7 @@
 
 .cockpit-exec-kpis {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 14px;
 }

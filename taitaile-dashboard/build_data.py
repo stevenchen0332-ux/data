@@ -31,8 +31,8 @@ ALIASES = {
     "day": ["日", "天"],
     "amount": ["GMV", "销售金额", "应收金额", "合计", "摊分支付金额", "货品原总金额"],
     "quantity": ["数量", "销售数量", "货品数量", "出货量"],
-    "channel": ["经销商", "店铺", "店铺名称", "渠道"],
-    "store": ["店铺", "店铺名称"],
+    "store": ["店铺", "店铺名称", "网店", "门店"],
+    "channel": ["经销商", "渠道", "客户"],
     "product": ["产品名称", "商品名称", "品名", "SKU名称", "货品名称"],
     "sku": ["商品编码", "货品编号", "SKU编号", "编码"],
     "category": ["产品大类", "类目", "品类", "商品类目"],
@@ -43,9 +43,10 @@ ALIASES = {
     "promotionSpend": ["推广花费", "推广费用", "广告消耗", "广告花费", "花费", "消耗"],
     "impressions": ["曝光", "曝光量", "展现", "展现量"],
     "clicks": ["点击", "点击量"],
+    "unitCost": ["含税进货价", "进货价", "成本单价", "含税成本"],
 }
 
-OPTIONAL_SUM_METRICS = ["visitors", "promotionSpend", "impressions", "clicks"]
+OPTIONAL_SUM_METRICS = ["visitors", "promotionSpend", "impressions", "clicks", "purchaseCost"]
 OPTIONAL_RATE_METRICS = ["conversionRate"]
 OPTIONAL_METRICS = OPTIONAL_SUM_METRICS + OPTIONAL_RATE_METRICS
 
@@ -67,8 +68,16 @@ def detect_fields(columns: list[str]) -> dict[str, str | None]:
         if not match:
             for col in columns:
                 norm_col = normalize_header(col)
-                if any(normalize_header(alias) in norm_col for alias in aliases):
+                for alias in sorted(aliases, key=lambda a: len(normalize_header(a)), reverse=True):
+                    an = normalize_header(alias)
+                    if not an or an not in norm_col:
+                        continue
+                    # 避免「店铺」命中「店铺访客数」等列名
+                    if key == "store" and an == normalize_header("店铺") and "访客" in norm_col:
+                        continue
                     match = col
+                    break
+                if match:
                     break
         detected[key] = match
     return detected
@@ -160,10 +169,8 @@ def aggregate_fact(df: pd.DataFrame) -> pd.DataFrame:
         if metric in df.columns:
             agg_map[metric] = (metric, "mean")
 
-    return df.groupby(
-        ["date", "month", "channel", "product", "sku", "category", "region"],
-        dropna=False,
-    ).agg(**agg_map).reset_index()
+    group_cols = [c for c in ("date", "month", "channel", "store", "product", "sku", "category", "region") if c in df.columns]
+    return df.groupby(group_cols, dropna=False).agg(**agg_map).reset_index()
 
 
 def main() -> None:
@@ -227,6 +234,7 @@ def main() -> None:
                 "date": date.loc[valid_mask].dt.strftime("%Y-%m-%d"),
                 "month": date.loc[valid_mask].dt.strftime("%Y-%m"),
                 "channel": clean_text(chunk.loc[valid_mask, fields["channel"]]) if fields.get("channel") else "未识别渠道",
+                "store": clean_text(chunk.loc[valid_mask, fields["store"]], "") if fields.get("store") else "",
                 "product": clean_text(chunk.loc[valid_mask, fields["product"]]) if fields.get("product") else "未识别商品",
                 "sku": clean_text(chunk.loc[valid_mask, fields["sku"]], "") if fields.get("sku") else "",
                 "category": clean_text(chunk.loc[valid_mask, fields["category"]], "未识别类目") if fields.get("category") else "未识别类目",
@@ -235,8 +243,13 @@ def main() -> None:
                 "quantity": pd.to_numeric(chunk.loc[valid_mask, fields["quantity"]], errors="coerce").fillna(0) if fields.get("quantity") else 0,
             })
             for metric in OPTIONAL_SUM_METRICS:
+                if metric == "purchaseCost":
+                    continue
                 if fields.get(metric):
                     out[metric] = numeric_series(chunk.loc[valid_mask, fields[metric]])
+            if fields.get("unitCost"):
+                unit_price = numeric_series(chunk.loc[valid_mask, fields["unitCost"]])
+                out["purchaseCost"] = unit_price * pd.to_numeric(out["quantity"], errors="coerce").fillna(0)
             for metric in OPTIONAL_RATE_METRICS:
                 if fields.get(metric):
                     out[metric] = numeric_series(chunk.loc[valid_mask, fields[metric]], as_rate=True)
@@ -262,7 +275,8 @@ def main() -> None:
         })
 
     fact = aggregate_fact(pd.concat(facts, ignore_index=True))
-    fact = fact.sort_values(["date", "channel", "product", "region"]).reset_index(drop=True)
+    sort_cols = [c for c in ("date", "channel", "store", "product", "region") if c in fact.columns]
+    fact = fact.sort_values(sort_cols).reset_index(drop=True)
     available_metrics = [
         metric for metric in OPTIONAL_METRICS
         if metric in fact.columns and fact[metric].notna().any() and float(fact[metric].fillna(0).abs().sum()) > 0
@@ -283,18 +297,33 @@ def main() -> None:
     region_idx = {v: i for i, v in enumerate(regions)}
     product_idx = {(row["sku"], row["product"]): i for i, row in enumerate(products)}
 
+    store_series = fact["store"].astype(str).str.strip() if "store" in fact.columns else pd.Series([""] * len(fact))
+    has_store_dim = bool(store_series.ne("").any())
+    stores: list[str] = []
+    store_idx: dict[str, int] = {}
+    if has_store_dim:
+        stores = sorted({s for s in store_series.tolist() if s})
+        store_idx = {v: i for i, v in enumerate(stores)}
+
     rows = []
     for rec in fact.itertuples(index=False):
         packed_row = [
             date_idx[rec.date],
             channel_idx[rec.channel],
-            product_idx[(rec.sku, rec.product)],
-            category_idx[rec.category],
-            region_idx[rec.region],
-            round_metric(rec.amount),
-            round_metric(rec.quantity),
-            int(rec.orders),
         ]
+        if has_store_dim:
+            s = str(getattr(rec, "store", "") or "").strip()
+            packed_row.append(int(store_idx[s]) if s in store_idx else -1)
+        packed_row.extend(
+            [
+                product_idx[(rec.sku, rec.product)],
+                category_idx[rec.category],
+                region_idx[rec.region],
+                round_metric(rec.amount),
+                round_metric(rec.quantity),
+                int(rec.orders),
+            ],
+        )
         for metric in available_metrics:
             packed_row.append(round_metric(getattr(rec, metric, 0) or 0))
         rows.append(packed_row)
@@ -319,6 +348,7 @@ def main() -> None:
             "products": products,
             "categories": categories,
             "regions": regions,
+            **({"stores": stores} if has_store_dim else {}),
         },
         "rows": rows,
         "metrics": available_metrics,
