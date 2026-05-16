@@ -335,19 +335,6 @@
     });
   }
 
-  function renderEfficiencyCards(cur) {
-    setText("ttlEffPromo", formatMoney(cur.promo));
-    setText("ttlEffRoi", cur.promo > 0 && Number.isFinite(cur.roi) ? cur.roi.toFixed(2) : "—");
-    setText("ttlEffFeeRatio", cur.gmv > 0 ? formatPct(cur.feeRatio) : "—");
-    if (cur.promoGmvShare > 0) {
-      setText("ttlEffPromoGmv", formatPct(cur.promoGmvShare));
-      setText("ttlEffPromoGmvNote", "来自 TTL_TRAFFIC_CONVERSION_STUB.promotedGmvShare");
-    } else {
-      setText("ttlEffPromoGmv", "—");
-      setText("ttlEffPromoGmvNote", "待接入推广归因 GMV 后计算占比");
-    }
-  }
-
   function buildDiagnostics(cur, prev, momRates) {
     const bullets = [];
     const cvrR = momRates.cvr;
@@ -360,9 +347,6 @@
     }
     if (bullets.length < 3) {
       bullets.push("GMV 分解关注 UV×CVR×AOV：先定位哪一支变化最大，再下沉到渠道与店铺执行清单。");
-    }
-    if (bullets.length < 3) {
-      bullets.push("投放侧同步看费比与 ROI：费用上升需有 GMV 或新客增量支撑，否则应做周度复盘纠偏。");
     }
     if (bullets.length < 3) {
       bullets.push("对比周期建议固定为完整自然周/月，减少大促错位造成的伪波动。");
@@ -439,11 +423,6 @@
         const el = document.getElementById(id);
         if (el) el.textContent = "";
       });
-      setText("ttlEffPromo", "—");
-      setText("ttlEffRoi", "—");
-      setText("ttlEffFeeRatio", "—");
-      setText("ttlEffPromoGmv", "—");
-      setText("ttlEffPromoGmvNote", "");
       const ul = document.getElementById("ttlTrafficDiagList");
       if (ul) ul.innerHTML = "";
       updateBadge(null);
@@ -533,7 +512,6 @@
     const daily = dailyFromRecords(records);
     renderBridge(daily);
     renderDual(daily);
-    renderEfficiencyCards(cur);
     renderDiagnostics(buildDiagnostics(cur, p, momRates));
 
     window.requestAnimationFrame(() => {
