@@ -407,6 +407,7 @@
         visitors: metrics.visitors || 0,
         conversionRate: metrics.conversionRate || 0,
         promotionSpend: metrics.promotionSpend || 0,
+        purchaseCost: metrics.purchaseCost || 0,
         impressions: metrics.impressions || 0,
         clicks: metrics.clicks || 0,
         pageViews: metrics.pageViews || metrics.pv || 0,

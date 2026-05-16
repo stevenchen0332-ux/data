@@ -81,6 +81,16 @@
     return { visitors, impressions, clicks, convWeight, convNumerator };
   }
 
+  function hasPlatformTraffic(records) {
+    return records.some(
+      (r) => readNum(r.visitors) > 0 || readNum(r.impressions) > 0 || readNum(r.clicks) > 0,
+    );
+  }
+
+  function hasPromotionSpend(records) {
+    return records.some((r) => readNum(r.promotionSpend) > 0);
+  }
+
   function estimateOrderCount(records) {
     const orderIds = new Set(records.map((record) => record.orderId).filter(Boolean));
     const missingOrderRows = sum(
@@ -92,19 +102,42 @@
   function aggregateCommerce(records) {
     const gmv = sum(records.map((r) => readNum(r.amount)));
     const traffic = sumTrafficFromRecords(records);
-    const uv = traffic.visitors;
-    const promo = sum(records.map((r) => readNum(r.promotionSpend)));
     const orders = estimateOrderCount(records);
+    const qty = sum(records.map((r) => readNum(r.quantity)));
+    const purchaseCost = sum(records.map((r) => readNum(r.purchaseCost)));
+
+    let uv = traffic.visitors;
+    let promo = sum(records.map((r) => readNum(r.promotionSpend)));
+    const notes = { uv: "", cvr: "", promo: "" };
+    let sourceMode = "traffic";
+
+    if (!hasPlatformTraffic(records)) {
+      sourceMode = "shipment";
+      uv = orders;
+      notes.uv = "出货口径：成交/发货笔数";
+    }
+
     let cvr = 0;
     if (traffic.convWeight > 0) cvr = traffic.convNumerator / traffic.convWeight;
     else if (uv > 0 && orders > 0) cvr = orders / uv;
+    if (!hasPlatformTraffic(records) && qty > 0 && orders > 0) {
+      cvr = orders / qty;
+      notes.cvr = "出货口径：笔数÷出货件数";
+    }
+
+    if (!hasPromotionSpend(records) && purchaseCost > 0) {
+      promo = purchaseCost;
+      notes.promo = "出货口径：进货成本(含税价×数量)";
+      if (sourceMode === "traffic") sourceMode = "mixed";
+    }
+
     const aov = orders > 0 ? gmv / orders : uv > 0 && cvr > 0 ? gmv / (uv * cvr) : 0;
-    const stub = window.TTL_TRAFFIC_CONVERSION_STUB || {};
-    const refundRate = readNum(stub.refundRate);
-    const netGmv = gmv * (1 - Math.min(Math.max(refundRate, 0), 0.95));
+    const netGmv = gmv;
     const roi = promo > 0 ? gmv / promo : 0;
     const feeRatio = gmv > 0 ? promo / gmv : 0;
+    const stub = window.TTL_TRAFFIC_CONVERSION_STUB || {};
     const promoGmvShare = readNum(stub.promotedGmvShare);
+
     return {
       gmv,
       netGmv,
@@ -113,11 +146,13 @@
       aov,
       promo,
       roi,
-      refundRate,
       feeRatio,
       promoGmvShare,
       orders,
-      qty: sum(records.map((r) => readNum(r.quantity))),
+      qty,
+      purchaseCost,
+      notes,
+      sourceMode,
     };
   }
 
@@ -165,9 +200,11 @@
       const o = map.get(dk);
       o.shipmentQty += readNum(r.quantity);
       o.gmv += readNum(r.amount);
-      o.uv += readNum(r.visitors);
-      o.promo += readNum(r.promotionSpend);
-      const v = readNum(r.visitors);
+      const visitors = readNum(r.visitors);
+      const lineOrders = readNum(r.orderCount) || 1;
+      o.uv += visitors > 0 ? visitors : lineOrders;
+      o.promo += readNum(r.promotionSpend) || readNum(r.purchaseCost) || 0;
+      const v = visitors > 0 ? visitors : lineOrders;
       let cvr = readNum(r.conversionRate);
       if (cvr > 1.000001) cvr /= 100;
       if (v > 0 && cvr > 0) {
@@ -321,9 +358,6 @@
     if (cur.promo > 0 && cur.roi < 1.1 && cur.roi > 0) {
       bullets.push("推广 ROI 低于 1.1：建议收缩低效计划、核对归因窗口，并对比自然成交占比是否被挤压。");
     }
-    if (cur.refundRate >= 0.05) {
-      bullets.push(`退款率约 ${formatPct(cur.refundRate)}：关注品控、物流破损与描述一致性，避免差评拖累转化。`);
-    }
     if (bullets.length < 3) {
       bullets.push("GMV 分解关注 UV×CVR×AOV：先定位哪一支变化最大，再下沉到渠道与店铺执行清单。");
     }
@@ -350,16 +384,34 @@
       .replace(/"/g, "&quot;");
   }
 
-  function updateBadge(extSummary) {
+  function updateBadge(extSummary, cur) {
     const el = document.getElementById("ttlTrafficDataBadge");
     if (!el) return;
     if (extSummary && extSummary.meta && extSummary.meta.source) {
       el.textContent = `数据源：${extSummary.meta.source}`;
       el.classList.remove("ttl-traffic__badge--stub");
-    } else {
-      el.textContent = "数据源：经营事实派生（可接入 TTL_TRAFFIC_CONVERSION_SUMMARY）";
-      el.classList.add("ttl-traffic__badge--stub");
+      return;
     }
+    if (cur && cur.sourceMode === "shipment") {
+      el.textContent = "数据源：出货口径（UV=成交笔数，费用=进货成本）";
+      el.classList.add("ttl-traffic__badge--stub");
+      return;
+    }
+    if (cur && cur.sourceMode === "mixed") {
+      el.textContent = "数据源：混合（流量列缺失，费用用进货成本）";
+      el.classList.add("ttl-traffic__badge--stub");
+      return;
+    }
+    el.textContent = "数据源：经营事实派生（可接入 TTL_TRAFFIC_CONVERSION_SUMMARY）";
+    el.classList.add("ttl-traffic__badge--stub");
+  }
+
+  function prependSubNote(subId, note) {
+    if (!note) return;
+    const sub = document.getElementById(subId);
+    if (!sub) return;
+    const span = sub.querySelector("span");
+    if (span) span.textContent = `${note} · ${span.textContent}`;
   }
 
   function runUpdate(context) {
@@ -374,7 +426,6 @@
         "ttlTrafficKpiAov",
         "ttlTrafficKpiPromo",
         "ttlTrafficKpiRoi",
-        "ttlTrafficKpiRefund",
       ].forEach((id) => setText(id, "—"));
       [
         "ttlTrafficKpiGmvSub",
@@ -384,7 +435,6 @@
         "ttlTrafficKpiAovSub",
         "ttlTrafficKpiPromoSub",
         "ttlTrafficKpiRoiSub",
-        "ttlTrafficKpiRefundSub",
       ].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.textContent = "";
@@ -402,10 +452,11 @@
     }
 
     const ext = mergeExternalSummary(records, context);
-    updateBadge(ext);
 
     const cur = aggregateCommerce(records);
     const p = aggregateCommerce(prevRecords);
+    updateBadge(ext, cur);
+
     const momRates = {
       gmv: growthRate(cur.gmv, p.gmv),
       net: growthRate(cur.netGmv, p.netGmv),
@@ -414,7 +465,6 @@
       aov: growthRate(cur.aov, p.aov),
       promo: growthRate(cur.promo, p.promo),
       roi: growthRate(cur.roi, p.roi),
-      refund: growthRate(cur.refundRate, p.refundRate),
     };
 
     setKpiRow({
@@ -441,6 +491,7 @@
       higherIsBetter: true,
       fmt: formatInt,
     });
+    prependSubNote("ttlTrafficKpiUvSub", cur.notes.uv);
     setKpiRow({
       valueId: "ttlTrafficKpiCvr",
       subId: "ttlTrafficKpiCvrSub",
@@ -449,6 +500,7 @@
       higherIsBetter: true,
       fmt: formatPct,
     });
+    prependSubNote("ttlTrafficKpiCvrSub", cur.notes.cvr);
     setKpiRow({
       valueId: "ttlTrafficKpiAov",
       subId: "ttlTrafficKpiAovSub",
@@ -465,22 +517,18 @@
       higherIsBetter: false,
       fmt: formatMoney,
     });
+    prependSubNote("ttlTrafficKpiPromoSub", cur.notes.promo);
     setKpiRow({
       valueId: "ttlTrafficKpiRoi",
       subId: "ttlTrafficKpiRoiSub",
       cur: cur.promo > 0 ? cur.roi : NaN,
       prev: p.promo > 0 ? p.roi : NaN,
       higherIsBetter: true,
-      fmt: (x) => (Number.isFinite(x) ? x.toFixed(2) : "—"),
+      fmt: (x) => (Number.isFinite(x) ? `${x.toFixed(2)}×` : "—"),
     });
-    setKpiRow({
-      valueId: "ttlTrafficKpiRefund",
-      subId: "ttlTrafficKpiRefundSub",
-      cur: cur.refundRate,
-      prev: p.refundRate,
-      higherIsBetter: false,
-      fmt: formatPct,
-    });
+    if (cur.notes.promo) {
+      prependSubNote("ttlTrafficKpiRoiSub", "GMV÷进货成本");
+    }
 
     const daily = dailyFromRecords(records);
     renderBridge(daily);
