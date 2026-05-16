@@ -72,12 +72,29 @@ def resolve_paths(cfg: dict) -> tuple[Path, Path, Path, Path, str | None]:
     return shipment, traffic, ROOT / out_bundle, ROOT / out_traffic, mirror
 
 
+def git_author_env(cfg: dict | None = None) -> dict:
+    """不修改 git config，仅用环境变量满足 commit 作者要求。"""
+    cfg = cfg or {}
+    name = os.environ.get("GIT_AUTHOR_NAME") or cfg.get("gitAuthorName") or "TTL Dashboard"
+    email = os.environ.get("GIT_AUTHOR_EMAIL") or cfg.get("gitAuthorEmail") or "dashboard@local"
+    return {
+        "GIT_AUTHOR_NAME": name,
+        "GIT_AUTHOR_EMAIL": email,
+        "GIT_COMMITTER_NAME": os.environ.get("GIT_COMMITTER_NAME", name),
+        "GIT_COMMITTER_EMAIL": os.environ.get("GIT_COMMITTER_EMAIL", email),
+    }
+
+
 def run(cmd: list[str], env: dict | None = None) -> None:
     print("$", " ".join(cmd))
     merged = os.environ.copy()
     if env:
         merged.update(env)
     subprocess.run(cmd, cwd=ROOT, check=True, env=merged)
+
+
+def run_git(cmd: list[str], cfg: dict) -> None:
+    run(cmd, env=git_author_env(cfg))
 
 
 def bump_cache_version(cfg: dict) -> str:
@@ -131,18 +148,22 @@ def git_publish(cfg: dict, stamp: str) -> None:
             ],
         )
 
-    run(["git", "add", *files])
-    status = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=ROOT)
+    run_git(["git", "add", *files], cfg)
+    status = subprocess.run(
+        ["git", "diff", "--cached", "--quiet"],
+        cwd=ROOT,
+        env={**os.environ.copy(), **git_author_env(cfg)},
+    )
     if status.returncode == 0:
         print("无数据变更，跳过提交。")
         return
 
-    run(["git", "commit", "-m", msg])
-    run(["git", "push", "origin", "main"])
-    run(["git", "checkout", "gh-pages"])
-    run(["git", "reset", "--hard", "main"])
-    run(["git", "push", "origin", "gh-pages", "--force"])
-    run(["git", "checkout", "main"])
+    run_git(["git", "commit", "-m", msg], cfg)
+    run_git(["git", "push", "origin", "main"], cfg)
+    run_git(["git", "checkout", "gh-pages"], cfg)
+    run_git(["git", "reset", "--hard", "main"], cfg)
+    run_git(["git", "push", "origin", "gh-pages", "--force"], cfg)
+    run_git(["git", "checkout", "main"], cfg)
     print("已推送到 main 与 gh-pages，约 1～3 分钟后线上生效。")
 
 
