@@ -469,6 +469,8 @@
       orderId: state.allRecords.some((record) => record.orderId),
     };
 
+    rebuildMergedDailyLayer();
+
     showFieldStatus(reports);
     buildFilterOptions();
     enableControls(Boolean(records.length));
@@ -1207,14 +1209,19 @@
     if (els.cockpitUpdatedAt) {
       els.cockpitUpdatedAt.textContent = `数据更新时间：${new Date().toLocaleString("zh-CN", { hour12: false })}`;
     }
-    renderOverview(context);
-    renderChannel(context);
-    renderProduct(context);
-    renderAnomaly(context);
-    renderTraffic(context);
-    renderRecommendation(context);
-    updateHealthText(context);
-    window.dispatchEvent(new CustomEvent("ttl-dashboard-context-updated", { detail: { context } }));
+    try {
+      renderOverview(context);
+      renderChannel(context);
+      renderProduct(context);
+      renderAnomaly(context);
+      renderTraffic(context);
+      renderRecommendation(context);
+      updateHealthText(context);
+      window.dispatchEvent(new CustomEvent("ttl-dashboard-context-updated", { detail: { context } }));
+    } catch (err) {
+      console.error("[TTL Dashboard] 渲染中断", err);
+      showToastLikeStatus(`看板渲染异常：${err.message || err}。请强刷页面（?v=20260516j）或检查 script.js 是否已更新。`, true);
+    }
     resizeCharts();
   }
 
@@ -1329,13 +1336,55 @@
     };
   }
 
+  function rebuildMergedDailyLayer() {
+    const mergedMod = window.TTL_MERGED_DATA;
+    if (!mergedMod || !state.allRecords.length) return;
+    const trafficRows = window.TTL_TRAFFIC_DATA?.rows || [];
+    try {
+      mergedMod.init(state.allRecords, trafficRows);
+    } catch (err) {
+      console.error("[TTL mergedDailyData] 构建失败", err);
+    }
+  }
+
   function enrichContextWithTraffic(context) {
-    const mod = window.TTL_TRAFFIC_DATA;
-    if (!mod || !mod.loaded) {
+    const mergedMod = window.TTL_MERGED_DATA;
+    if (!mergedMod || !mergedMod.built) {
+      context.mergedDaily = null;
       context.traffic = null;
       return;
     }
-    context.traffic = mod.buildTrafficContext(context, getTrafficFilterSets);
+    const merged = mergedMod.buildMergedContext(context, getTrafficFilterSets);
+    context.mergedDaily = merged;
+    if (!merged) {
+      context.traffic = null;
+      return;
+    }
+    const curDailyMap = new Map();
+    merged.curDaily.forEach((d) => {
+      curDailyMap.set(d.date, {
+        date: d.date,
+        uv: d.UV,
+        gmv: d.trafficGMV,
+        promo: d.adCost,
+        buyers: d.buyers,
+        cvr: d.CVR,
+        aov: d.ASP,
+      });
+    });
+    context.traffic = {
+      cur: mergedMod.toTrafficBlock(merged.curSums),
+      prev: mergedMod.toTrafficBlock(merged.prevSums),
+      curRows: merged.curRows,
+      prevRows: merged.prevRows,
+      curDaily: curDailyMap,
+      curDailySeries: merged.curDailySeries,
+      prevDailySeries: merged.prevDailySeries,
+      hasUv: merged.curSums.UV > 0,
+      hasPromo: merged.curSums.adCost > 0,
+      hasImpressions: false,
+      hasClicks: false,
+    };
   }
 
   function formatRoiMultiple(value) {
@@ -1433,16 +1482,41 @@
   }
 
   function trafficDailySeriesAligned(context, which) {
+    const md = context.mergedDaily;
+    if (md) return which === "prev" ? md.prevDailySeries || [] : md.curDailySeries || [];
     const tr = context.traffic;
     if (!tr) return [];
     return which === "prev" ? tr.prevDailySeries || [] : tr.curDailySeries || [];
   }
 
+  function mergedDailySeriesForExec(context, which) {
+    const md = context.mergedDaily;
+    if (!md) return [];
+    const rows = which === "prev" ? md.prevDaily : md.curDaily;
+    return (rows || []).map((d) => ({
+      date: d.date,
+      amount: d.shipmentGMV,
+      quantity: d.shipmentQty,
+      uv: d.UV,
+      gmv: d.trafficGMV,
+      promo: d.adCost,
+      cvr: d.UV > 0 ? d.shipmentQty / d.UV : null,
+    }));
+  }
+
   function renderExecTrendCharts(context) {
-    const shipCur = aggregateDailyWithTraffic(context.filteredRecords).slice(-30);
+    const shipCur = (context.mergedDaily
+      ? mergedDailySeriesForExec(context, "cur")
+      : aggregateDailyWithTraffic(context.filteredRecords)
+    ).slice(-30);
     const trafficCur = trafficDailySeriesAligned(context, "cur").slice(-30);
     const trafficPrev = padSeriesTail(trafficDailySeriesAligned(context, "prev"), trafficCur.length);
-    const shipPrev = padSeriesTail(aggregateDailyWithTraffic(context.previousMonthRecords), shipCur.length);
+    const shipPrev = padSeriesTail(
+      context.mergedDaily
+        ? mergedDailySeriesForExec(context, "prev")
+        : aggregateDailyWithTraffic(context.previousMonthRecords),
+      shipCur.length,
+    );
     const ids = ["execTrendShipment", "execTrendGmv", "execTrendUv", "execTrendCvr"];
     const xFrom = (series) => (series.length ? series : shipCur).map((d) => d.date.slice(5));
 
@@ -2738,7 +2812,15 @@
   }
 
   function trafficDailyFromContext(context) {
-    const ship = aggregateDailyExecutive(context.filteredRecords, context.traffic?.curDaily);
+    const ship = context.mergedDaily
+      ? mergedDailySeriesForExec(context, "cur").map((d) => ({
+          date: d.date,
+          amount: d.amount,
+          quantity: d.quantity,
+          uv: d.uv,
+          cvr: d.cvr,
+        }))
+      : aggregateDailyExecutive(context.filteredRecords, context.traffic?.curDaily);
     return ship.map((d) => ({
       date: d.date.slice(5),
       dateKey: d.date,
@@ -2750,7 +2832,7 @@
   }
 
   function aggregateTrafficChannelFromJson(context) {
-    const rows = context.traffic?.curRows || [];
+    const rows = context.mergedDaily?.curRows || context.traffic?.curRows || [];
     const map = new Map();
     rows.forEach((row) => {
       const name = row.platform || row.shop || "未命名";
@@ -2768,8 +2850,9 @@
   }
 
   function renderTraffic(context) {
-    const tr = context.traffic;
-    const tc = tr?.cur;
+    const md = context.mergedDaily;
+    const sums = md?.curSums;
+    const tc = sums?.rowCount ? sums : context.traffic?.cur;
 
     if (!tc || !tc.rowCount) {
       setText(
@@ -2785,23 +2868,29 @@
       return;
     }
 
-    const daily = tr.curDailySeries || [];
+    const daily = md?.curDailySeries || context.traffic?.curDailySeries || [];
     setTrafficCardVisible("trafficKpiImpressionsCard", false);
     setTrafficCardVisible("trafficKpiClicksCard", false);
 
-    setText("trafficKpiVisitors", formatInteger(tc.uv));
-    setText("trafficKpiVisitorsSub", `流量 GMV ${formatMoney(tc.gmv)} · ${tc.rowCount} 日`);
+    const uvVal = tc.UV != null ? tc.UV : tc.uv;
+    const gmvVal = tc.trafficGMV != null ? tc.trafficGMV : tc.gmv;
+    const promoVal = tc.adCost != null ? tc.adCost : tc.promo;
+    const cvrVal = tc.CVR != null ? tc.CVR : tc.cvr;
+    const buyersVal = tc.buyers;
 
-    setText("trafficKpiConv", tc.cvr != null ? formatPercent(tc.cvr) : "—");
+    setText("trafficKpiVisitors", formatInteger(uvVal));
+    setText("trafficKpiVisitorsSub", `流量 GMV ${formatMoney(gmvVal)} · ${tc.rowCount} 日`);
+
+    setText("trafficKpiConv", cvrVal != null ? formatPercent(cvrVal) : "—");
     setText(
       "trafficKpiConvSub",
-      tc.buyers > 0 ? `支付买家 ${formatInteger(tc.buyers)} ÷ UV ${formatInteger(tc.uv)}` : "—",
+      buyersVal > 0 ? `支付买家 ${formatInteger(buyersVal)} ÷ UV ${formatInteger(uvVal)}` : "—",
     );
 
-    const roi = tc.promo > 0 ? tc.gmv / tc.promo : null;
+    const roi = promoVal > 0 ? gmvVal / promoVal : null;
     setText(
       "trafficConclusion",
-      `${context.currentLabel || "当前筛选"}：UV ${formatInteger(tc.uv)}，流量 GMV ${formatMoney(tc.gmv)}，推广费 ${formatMoney(tc.promo)}，ROI ${formatRoiMultiple(roi)}。`,
+      `${context.currentLabel || "当前筛选"}：UV ${formatInteger(uvVal)}，流量 GMV ${formatMoney(gmvVal)}，推广费 ${formatMoney(promoVal)}，ROI ${formatRoiMultiple(roi)}。`,
     );
 
     const titleEl = document.getElementById("trafficDailyChartTitle");

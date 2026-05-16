@@ -231,11 +231,6 @@
       return;
     }
     const uv = tail.map((d) => (d.uv > 0 ? Math.round(d.uv) : null));
-    const cvr = tail.map((d) => {
-      const r = normalizeCvrRate(d.cvr);
-      return r != null ? r * 100 : null;
-    });
-    const aov = tail.map((d) => (d.aov != null && d.aov > 0 ? d.aov : null));
     const gmv = tail.map((d) => Math.round(d.gmv));
     chart.setOption({
       ...baseChartOption(),
@@ -249,45 +244,38 @@
       ],
       series: [
         { name: "UV", type: "line", smooth: true, showSymbol: false, data: uv, lineStyle: { width: 2, color: COLORS.primary } },
-        { name: "CVR(%)", type: "line", smooth: true, showSymbol: false, yAxisIndex: 0, data: cvr, lineStyle: { width: 1.6, color: COLORS.warn } },
-        { name: "AOV", type: "line", smooth: true, showSymbol: false, yAxisIndex: 0, data: aov, lineStyle: { width: 1.6, color: COLORS.teal } },
         { name: "GMV", type: "line", smooth: true, showSymbol: false, yAxisIndex: 1, data: gmv, lineStyle: { width: 2, color: COLORS.rose } },
       ],
     });
   }
 
-  function renderDual(shipmentDaily, trafficDaily) {
+  function renderGmvAdCost(daily) {
     const chart = getChart("ttlTrafficDualAxisChart");
     if (!chart) return;
-    const tailShip = (shipmentDaily || []).slice(-60);
-    const tailTraffic = (trafficDaily || []).slice(-60);
-    const dates = tailTraffic.length
-      ? tailTraffic.map((d) => d.date)
-      : tailShip.map((d) => d.date);
-    if (!dates.length) {
+    const tail = (daily || []).slice(-45);
+    if (!tail.length) {
       chart.setOption({
         ...baseChartOption(),
         title: { text: "暂无数据", left: "center", top: "middle", textStyle: { color: COLORS.muted, fontSize: 13 } },
       });
       return;
     }
-    const shipByDate = new Map(tailShip.map((d) => [d.date, d]));
     chart.setOption({
       ...baseChartOption(),
       tooltip: { trigger: "axis" },
       legend: { top: 0, textStyle: { color: COLORS.muted, fontSize: 11 } },
       grid: chartGrid(40),
-      xAxis: { type: "category", data: dates, axisLabel: { color: COLORS.muted, fontSize: 10 } },
+      xAxis: { type: "category", data: tail.map((d) => d.date), axisLabel: { color: COLORS.muted, fontSize: 10 } },
       yAxis: [
         {
           type: "value",
-          name: "出货数量",
+          name: "GMV",
           axisLabel: { color: COLORS.muted },
           splitLine: { lineStyle: { color: COLORS.grid } },
         },
         {
           type: "value",
-          name: "流量 GMV",
+          name: "推广费",
           position: "right",
           axisLabel: { color: COLORS.muted },
           splitLine: { show: false },
@@ -295,26 +283,21 @@
       ],
       series: [
         {
-          name: "出货数量",
-          type: "bar",
-          barMaxWidth: 14,
-          data: dates.map((dk) => {
-            const d = shipByDate.get(dk);
-            return d ? Math.round(d.shipmentQty) : null;
-          }),
-          itemStyle: { color: COLORS.primary },
-        },
-        {
-          name: "流量 GMV",
+          name: "GMV",
           type: "line",
           smooth: true,
-          yAxisIndex: 1,
           showSymbol: false,
-          data: dates.map((dk) => {
-            const t = tailTraffic.find((d) => d.date === dk);
-            return t ? Math.round(t.gmv) : null;
-          }),
+          data: tail.map((d) => Math.round(d.gmv)),
           lineStyle: { width: 2, color: COLORS.rose },
+          itemStyle: { color: COLORS.rose },
+        },
+        {
+          name: "推广费",
+          type: "bar",
+          yAxisIndex: 1,
+          barMaxWidth: 14,
+          data: tail.map((d) => (d.promo > 0 ? Math.round(d.promo) : null)),
+          itemStyle: { color: COLORS.primary },
         },
       ],
     });
@@ -384,11 +367,12 @@
   }
 
   function runUpdate(context) {
+    const md = context.mergedDaily;
     const tr = context.traffic;
-    const records = context.filteredRecords || [];
-    const hasShipment = records.length > 0;
+    const curSums = md?.curSums;
+    const hasMerged = curSums && curSums.rowCount > 0;
 
-    if (!tr || !tr.cur || !tr.cur.rowCount) {
+    if (!hasMerged && (!tr || !tr.cur || !tr.cur.rowCount)) {
       [
         "ttlTrafficKpiGmv",
         "ttlTrafficKpiNetGmv",
@@ -417,10 +401,36 @@
       return;
     }
 
-    const ext = mergeExternalSummary(records, context);
-    const cur = metricsFromTrafficBlock(tr.cur);
-    const p = metricsFromTrafficBlock(tr.prev);
-    updateBadge(ext, tr);
+    const ext = mergeExternalSummary(context.filteredRecords || [], context);
+    const cur = hasMerged
+      ? {
+          gmv: curSums.trafficGMV,
+          netGmv: curSums.trafficGMV,
+          uv: curSums.UV,
+          cvr: curSums.CVR,
+          aov: curSums.ASP,
+          promo: curSums.adCost,
+          roi: curSums.roi,
+          rowCount: curSums.rowCount,
+        }
+      : metricsFromTrafficBlock(tr.cur);
+    const prevSums = md?.prevSums;
+    const p = hasMerged
+      ? {
+          gmv: prevSums.trafficGMV,
+          netGmv: prevSums.trafficGMV,
+          uv: prevSums.UV,
+          cvr: prevSums.CVR,
+          aov: prevSums.ASP,
+          promo: prevSums.adCost,
+          roi: prevSums.roi,
+          rowCount: prevSums.rowCount,
+        }
+      : metricsFromTrafficBlock(tr.prev);
+    updateBadge(
+      ext,
+      hasMerged ? { hasUv: curSums.UV > 0, hasPromo: curSums.adCost > 0 } : tr,
+    );
 
     const momRates = {
       gmv: growthRate(cur.gmv, p.gmv),
@@ -489,11 +499,9 @@
       fmt: (x) => (Number.isFinite(x) ? `${x.toFixed(2)}×` : "—"),
     });
 
-    const dailyTraffic = tr.curDailySeries || [];
+    const dailyTraffic = md?.curDailySeries || tr?.curDailySeries || [];
     renderBridge(dailyTraffic);
-
-    const shipmentDaily = hasShipment ? dailyFromRecords(records) : [];
-    renderDual(shipmentDaily, dailyTraffic);
+    renderGmvAdCost(dailyTraffic);
 
     renderDiagnostics(buildDiagnostics(cur, p, momRates));
 
