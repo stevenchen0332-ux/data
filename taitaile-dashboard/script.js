@@ -78,6 +78,7 @@
   document.addEventListener("DOMContentLoaded", () => {
     cacheDom();
     bindEvents();
+    closeAllMultiDropdowns();
     renderEmptyState();
     if (!window.echarts) {
       showFieldStatus([
@@ -117,7 +118,6 @@
       "categoryFilter",
       "storeFilter",
       "storeFilterWrap",
-      "filterDimsPrimaryGrid",
       "brandFilter",
       "brandFilterWrap",
       "regionFilter",
@@ -132,6 +132,8 @@
       "regionFilterPanel",
       "productSearch",
       "resetFiltersBtn",
+      "cockpitApplyFiltersBtn",
+      "cockpitUpdatedAt",
       "exportBtn",
       "dateRangeText",
       "recordCountText",
@@ -141,17 +143,6 @@
       "dashboardContent",
       "overviewConclusion",
       "overviewInsights",
-      "kpiGmv",
-      "kpiGmvSub",
-      "kpiQty",
-      "kpiQtySub",
-      "kpiOrders",
-      "kpiOrdersSub",
-      "kpiAvgPrice",
-      "kpiDailyAvg",
-      "kpiDailyAvgSub",
-      "kpiMom",
-      "kpiMomSub",
       "monthTrendLabel",
       "forecastSummary",
       "channelConclusion",
@@ -274,6 +265,13 @@
       renderDashboard();
     });
 
+    if (els.cockpitApplyFiltersBtn) {
+      els.cockpitApplyFiltersBtn.addEventListener("click", () => {
+        closeAllMultiDropdowns();
+        renderDashboard();
+      });
+    }
+
     els.exportBtn.addEventListener("click", exportFilteredRecords);
 
     els.navItems.forEach((button) => {
@@ -282,7 +280,15 @@
       });
     });
 
-    window.addEventListener("resize", debounce(resizeCharts, 120));
+    window.addEventListener(
+      "resize",
+      debounce(() => {
+        closeAllMultiDropdowns();
+        resizeCharts();
+      }, 120),
+    );
+
+    closeAllMultiDropdowns();
   }
 
   async function handleFiles(files) {
@@ -353,16 +359,22 @@
     const dims = bundle.dims || {};
     const products = dims.products || [];
     const stores = dims.stores;
-    const hasStoreDim = Array.isArray(stores) && stores.length > 0;
+    const storeCatalog = Array.isArray(stores) && stores.length > 0;
     const metricKeys = bundle.metrics || bundle.meta?.operationFields || [];
+    const metricCount = metricKeys.length;
+    const sampleRow = (bundle.rows && bundle.rows[0]) || [];
+    const rowWidth = sampleRow.length;
+    // 每行是否含「店铺」下标列，必须以行宽为准：仅有 dims.stores 名称但行仍是 8 列旧包时，
+    // 若误用 9 列偏移会把地区下标当成 GMV、把 GMV 当成数量（KPI 金额/件数互换感）。
+    const hasStoreColumn = rowWidth === 9 + metricCount;
     const records = (bundle.rows || []).map((row, index) => {
-      const pi = hasStoreDim ? 3 : 2;
-      const ci = hasStoreDim ? 4 : 3;
-      const ri = hasStoreDim ? 5 : 4;
-      const amountI = hasStoreDim ? 6 : 5;
-      const qtyI = hasStoreDim ? 7 : 6;
-      const ordersI = hasStoreDim ? 8 : 7;
-      const metricBase = hasStoreDim ? 9 : 8;
+      const pi = hasStoreColumn ? 3 : 2;
+      const ci = hasStoreColumn ? 4 : 3;
+      const ri = hasStoreColumn ? 5 : 4;
+      const amountI = hasStoreColumn ? 6 : 5;
+      const qtyI = hasStoreColumn ? 7 : 6;
+      const ordersI = hasStoreColumn ? 8 : 7;
+      const metricBase = hasStoreColumn ? 9 : 8;
       const product = products[row[pi]] || {};
       const dateKey = dims.dates[row[0]];
       const metrics = {};
@@ -370,7 +382,7 @@
         metrics[key] = Number(row[metricBase + metricIndex]) || 0;
       });
       let storeVal = "";
-      if (hasStoreDim && row.length > 2) {
+      if (hasStoreColumn && storeCatalog && row.length > 2) {
         const si = Number(row[2]);
         if (Number.isFinite(si) && si >= 0 && stores[si] != null && String(stores[si]).trim() !== "") {
           storeVal = String(stores[si]).trim();
@@ -425,9 +437,14 @@
 
     applyReports([report]);
     const baseMsg = `已加载本地数据包：${formatInteger(bundle.meta.rawRows)} 行原始数据，${formatInteger(bundle.meta.factRows)} 条经营事实`;
-    if (!hasStoreDim) {
+    if (!hasStoreColumn && !storeCatalog) {
       showToastLikeStatus(
         `${baseMsg}。提示：当前包无店铺维度（缺少 dims.stores），店铺筛选仅「全部」。请在本机运行 build_data.py 用含「店铺」列的源表重新生成 data-bundle.js，替换站点同目录文件后强刷（可改 index 里 data-bundle.js 的 ?v=）。`,
+        true,
+      );
+    } else if (storeCatalog && !hasStoreColumn) {
+      showToastLikeStatus(
+        `${baseMsg}。提示：数据包含店铺名称列表，但每行仍是旧版 8 列布局（行内无店铺下标）；店铺筛选可能不完整。请用最新 build_data.py 重新生成 data-bundle.js。`,
         true,
       );
     } else {
@@ -757,10 +774,6 @@
 
     els.brandFilterWrap.classList.toggle("hidden", !brands.length);
     els.regionFilterWrap.classList.toggle("hidden", !regions.length);
-    if (els.filterDimsPrimaryGrid) {
-      els.filterDimsPrimaryGrid.classList.toggle("has-region", regions.length > 0);
-    }
-
     if (dates.length) {
       els.startDateFilter.min = dates[0];
       els.startDateFilter.max = dates[dates.length - 1];
@@ -787,7 +800,8 @@
       els.storeFilter,
       els.productSearch,
       els.exportBtn,
-    ].forEach((control) => {
+      els.cockpitApplyFiltersBtn,
+    ].filter(Boolean).forEach((control) => {
       control.disabled = !enabled;
     });
 
@@ -798,6 +812,8 @@
     [els.channelFilter, els.categoryFilter, els.storeFilter, els.regionFilter].forEach((select) => {
       syncMultiDropdownFromSelect(select);
     });
+    if (els.cockpitApplyFiltersBtn) els.cockpitApplyFiltersBtn.disabled = !enabled;
+    closeAllMultiDropdowns();
   }
 
   function getMultiDropdownParts(select) {
@@ -809,10 +825,29 @@
     return { root, trigger, panel };
   }
 
+  function positionOverlayPanel(trigger, panel) {
+    panel.classList.add("is-overlay");
+    const rect = trigger.getBoundingClientRect();
+    const width = Math.min(Math.max(rect.width, 220), 360);
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    const top = rect.bottom + 6;
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+    panel.style.width = `${width}px`;
+  }
+
+  function clearOverlayPanel(panel) {
+    panel.classList.remove("is-overlay");
+    panel.style.left = "";
+    panel.style.top = "";
+    panel.style.width = "";
+  }
+
   function closeAllMultiDropdowns() {
     document.querySelectorAll(".multi-dropdown-root.is-open").forEach((root) => root.classList.remove("is-open"));
-    document.querySelectorAll(".multi-dropdown-panel:not([hidden])").forEach((panel) => {
+    document.querySelectorAll(".multi-dropdown-panel").forEach((panel) => {
       panel.hidden = true;
+      clearOverlayPanel(panel);
     });
     document.querySelectorAll(".multi-dropdown-trigger[aria-expanded='true']").forEach((btn) => {
       btn.setAttribute("aria-expanded", "false");
@@ -824,6 +859,7 @@
     trigger.setAttribute("aria-expanded", "true");
     const root = trigger.closest(".multi-dropdown-root");
     if (root) root.classList.add("is-open");
+    positionOverlayPanel(trigger, panel);
   }
 
   function updateMultiDropdownTriggerText(select, trigger) {
@@ -896,10 +932,14 @@
   function syncMultiDropdownFromSelect(select) {
     const parts = getMultiDropdownParts(select);
     if (!parts) return;
-    const { trigger, panel } = parts;
+    const { trigger, panel, root } = parts;
     trigger.disabled = select.disabled;
     updateMultiDropdownTriggerText(select, trigger);
     rebuildMultiDropdownPanel(select, panel, trigger);
+    if (!root.classList.contains("is-open")) {
+      panel.hidden = true;
+      clearOverlayPanel(panel);
+    }
   }
 
   function initMultiDropdowns() {
@@ -1159,6 +1199,9 @@
     els.emptyState.classList.add("hidden");
     els.dashboardContent.classList.remove("hidden");
     updateMeta(context);
+    if (els.cockpitUpdatedAt) {
+      els.cockpitUpdatedAt.textContent = `数据更新时间：${new Date().toLocaleString("zh-CN", { hour12: false })}`;
+    }
     renderOverview(context);
     renderChannel(context);
     renderProduct(context);
@@ -1285,29 +1328,291 @@
     els.exportBtn.disabled = !context.filteredRecords.length;
   }
 
+  function sumMetricRecords(records, key) {
+    return sum(records.map((r) => Number(r[key]) || 0));
+  }
+
+  function aggregateDailyWithTraffic(records) {
+    const map = new Map();
+    records.forEach((r) => {
+      if (!r.dateKey) return;
+      if (!map.has(r.dateKey)) {
+        map.set(r.dateKey, {
+          date: r.dateKey,
+          amount: 0,
+          quantity: 0,
+          visitors: 0,
+          orderCount: 0,
+        });
+      }
+      const d = map.get(r.dateKey);
+      d.amount += r.amount;
+      d.quantity += r.quantity;
+      d.visitors += Number(r.visitors) || 0;
+      d.orderCount += Number(r.orderCount) || 0;
+    });
+    return Array.from(map.values())
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((d) => ({
+        ...d,
+        cvr: d.visitors > 0 ? d.orderCount / d.visitors : 0,
+      }));
+  }
+
+  function setExecTrendArrow(id, rate) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!Number.isFinite(rate)) {
+      el.className = "cockpit-exec-trend cockpit-exec-trend--flat";
+      el.textContent = "—";
+      return;
+    }
+    const up = rate > 0.002;
+    const down = rate < -0.002;
+    el.className =
+      "cockpit-exec-trend " +
+      (up ? "cockpit-exec-trend--up" : down ? "cockpit-exec-trend--down" : "cockpit-exec-trend--flat");
+    el.textContent = `较对比期 ${formatGrowth(rate)}`;
+  }
+
+  function padSeriesTail(prevArr, len) {
+    const tail = prevArr.slice(-len);
+    const pad = len - tail.length;
+    if (pad > 0) return [...Array(pad).fill(null), ...tail];
+    return tail;
+  }
+
+  function renderExecTrendCharts(context) {
+    const cur = aggregateDailyWithTraffic(context.filteredRecords).slice(-30);
+    const ids = ["execTrendShipment", "execTrendGmv", "execTrendUv", "execTrendCvr"];
+    if (!cur.length) {
+      ids.forEach((id) => setChart(id, emptyChartOption("暂无数据")));
+      return;
+    }
+    const prevArr = padSeriesTail(aggregateDailyWithTraffic(context.previousMonthRecords), cur.length);
+    const x = cur.map((d) => d.date.slice(5));
+    const line = (nameCur, curData, namePrev, prevData, axisFmt) => ({
+      ...baseChartOption(),
+      tooltip: { trigger: "axis" },
+      legend: { data: [nameCur, namePrev], top: 2, textStyle: { fontSize: 11 } },
+      grid: { top: 40, right: 16, bottom: 26, left: 52, containLabel: false },
+      xAxis: { type: "category", data: x, axisLabel: { color: COLORS.muted, fontSize: 11 } },
+      yAxis: {
+        type: "value",
+        axisLabel: { color: COLORS.muted, formatter: axisFmt },
+        splitLine: { lineStyle: { color: COLORS.grid } },
+      },
+      series: [
+        {
+          name: nameCur,
+          type: "line",
+          smooth: true,
+          showSymbol: false,
+          data: curData,
+          lineStyle: { width: 2.2, color: COLORS.primary },
+          itemStyle: { color: COLORS.primary },
+        },
+        {
+          name: namePrev,
+          type: "line",
+          smooth: true,
+          showSymbol: false,
+          data: prevData,
+          lineStyle: { width: 2, type: "dashed", color: "#94a3b8" },
+          itemStyle: { color: "#94a3b8" },
+          connectNulls: true,
+        },
+      ],
+    });
+
+    setChart(
+      "execTrendShipment",
+      line(
+        "本期出货",
+        cur.map((d) => round2(d.quantity)),
+        "对比期出货",
+        prevArr.map((p) => (p ? round2(p.quantity) : null)),
+        compactAxis,
+      ),
+    );
+    setChart(
+      "execTrendGmv",
+      line(
+        "本期 GMV",
+        cur.map((d) => round2(d.amount)),
+        "对比期 GMV",
+        prevArr.map((p) => (p ? round2(p.amount) : null)),
+        compactAxis,
+      ),
+    );
+    const uvCur = cur.map((d) => round2(d.visitors));
+    const hasUv = uvCur.some((v) => v > 0);
+    if (!hasUv) {
+      setChart("execTrendUv", emptyChartOption("当前数据包无 UV/访客字段或全为 0"));
+    } else {
+      setChart(
+        "execTrendUv",
+        line(
+          "本期 UV",
+          uvCur,
+          "对比期 UV",
+          prevArr.map((p) => (p ? round2(p.visitors) : null)),
+          compactAxis,
+        ),
+      );
+    }
+    setChart(
+      "execTrendCvr",
+      line(
+        "本期转化率 %",
+        cur.map((d) => round2(d.cvr * 100)),
+        "对比期 %",
+        prevArr.map((p) => (p ? round2(p.cvr * 100) : null)),
+        (v) => `${v}%`,
+      ),
+    );
+  }
+
+  function renderExecDiagnosis(context) {
+    const list = document.getElementById("execDiagnosisList");
+    if (!list) return;
+    const { filteredRecords, previousMonthRecords, mom, totals, previousTotals, currentTotals } = context;
+    if (!filteredRecords.length || !previousMonthRecords.length) {
+      renderList(list, ["对比期或当前筛选下数据不足，暂无法生成诊断。"]);
+      return;
+    }
+    const uv0 = sumMetricRecords(filteredRecords, "visitors");
+    const uv1 = sumMetricRecords(previousMonthRecords, "visitors");
+    const uvMom = uv1 > 0 ? (uv0 - uv1) / uv1 : NaN;
+    const ord0 = sumMetricRecords(filteredRecords, "orderCount");
+    const ord1 = sumMetricRecords(previousMonthRecords, "orderCount");
+    const cvr0 = uv0 > 0 ? ord0 / uv0 : 0;
+    const cvr1 = uv1 > 0 ? ord1 / uv1 : 0;
+    const aov0 = uv0 > 0 ? totals.amount / uv0 : totals.quantity ? totals.amount / totals.quantity : 0;
+    const aov1 = uv1 > 0 ? previousTotals.amount / uv1 : previousTotals.quantity ? previousTotals.amount / previousTotals.quantity : 0;
+    const qtyMom = calcGrowth(currentTotals.quantity, previousTotals.quantity);
+    const spend0 = sumMetricRecords(filteredRecords, "promotionSpend");
+    const spend1 = sumMetricRecords(previousMonthRecords, "promotionSpend");
+    const roi0 = spend0 > 0 ? totals.amount / spend0 : 0;
+    const roi1 = spend1 > 0 ? previousTotals.amount / spend1 : 0;
+
+    const bullets = [];
+    if (mom.rate < -0.02 && Number.isFinite(uvMom) && Math.abs(uvMom) < 0.04 && cvr0 < cvr1 * 0.97) {
+      bullets.push("GMV 走弱而 UV 变化不大，转化率相对对比期偏低 → 优先排查承接与转化（活动、库存、页面路径）。");
+    }
+    if (mom.rate < -0.02 && Number.isFinite(uvMom) && uvMom < -0.05) {
+      bullets.push("UV 明显下滑带动 GMV → 结合下方渠道/投放结构，检查主要流量入口是否收缩。");
+    }
+    if (mom.rate < -0.02 && aov0 < aov1 * 0.95 && Math.abs((cvr0 || 0) - (cvr1 || 0)) < 0.02) {
+      bullets.push("客单价下行是主因，转化率相对稳定 → 关注折扣深度、件单价与品类组合。");
+    }
+    if (spend0 > 0 && roi0 > 0 && roi1 > 0 && roi0 < roi1 * 0.9) {
+      bullets.push("ROI 走弱，单位推广产出下降 → 收紧低效花费并复盘高费低产渠道。");
+    }
+    if (mom.rate < -0.02 && qtyMom.rate > -0.02) {
+      bullets.push("GMV 下行但出货件数未同步走弱 → 留意退款、口径差异或低价冲量带来的 GMV 风险。");
+    }
+    if (bullets.length < 3) {
+      bullets.push(
+        `本周期 GMV 环比 ${formatGrowth(mom.rate)}，出货件数环比 ${formatGrowth(qtyMom.rate)}；建议继续查看「渠道归因」「商品经营」定位拖累项。`,
+      );
+    }
+    renderList(list, bullets.slice(0, 3));
+  }
+
+  function renderExecutiveCockpit(context) {
+    if (!document.getElementById("execV0")) return;
+    const { totals, currentTotals, previousTotals, mom, filteredRecords } = context;
+    if (!filteredRecords.length) {
+      for (let i = 0; i < 10; i += 1) {
+        setText(`execV${i}`, "—");
+        setText(`execS${i}`, "");
+        setExecTrendArrow(`execT${i}`, NaN);
+      }
+      ["execTrendShipment", "execTrendGmv", "execTrendUv", "execTrendCvr"].forEach((id) => {
+        setChart(id, emptyChartOption("暂无数据"));
+      });
+      renderExecDiagnosis(context);
+      return;
+    }
+
+    const qtyGrowth = calcGrowth(currentTotals.quantity, previousTotals.quantity);
+    const spend = sumMetricRecords(filteredRecords, "promotionSpend");
+    const visitors = sumMetricRecords(filteredRecords, "visitors");
+    const prevSpend = sumMetricRecords(context.previousMonthRecords, "promotionSpend");
+    const prevVisitors = sumMetricRecords(context.previousMonthRecords, "visitors");
+    const orders = sumMetricRecords(filteredRecords, "orderCount");
+    const cvr = visitors > 0 ? orders / visitors : 0;
+    const prevOrders = sumMetricRecords(context.previousMonthRecords, "orderCount");
+    const prevCvr = prevVisitors > 0 ? prevOrders / prevVisitors : 0;
+    const aovTraffic = visitors > 0 ? totals.amount / visitors : totals.avgPrice || 0;
+    const prevAov =
+      prevVisitors > 0
+        ? previousTotals.amount / prevVisitors
+        : previousTotals.quantity
+          ? previousTotals.amount / previousTotals.quantity
+          : 0;
+
+    setText("execV0", formatInteger(totals.quantity));
+    setText("execS0", `${context.currentLabel} · 有数据日 ${totals.dateCount} 天`);
+    setExecTrendArrow("execT0", qtyGrowth.rate);
+
+    setText("execV1", formatMoney(totals.amount));
+    setText("execS1", "出货 GMV · 当前筛选");
+    setExecTrendArrow("execT1", mom.rate);
+
+    const dailyShip = totals.dateCount ? totals.quantity / totals.dateCount : 0;
+    setText("execV2", formatInteger(Math.round(dailyShip)));
+    setText("execS2", "件 / 有数据日");
+    setExecTrendArrow("execT2", NaN);
+
+    setText("execV3", formatGrowth(qtyGrowth.rate));
+    setText("execS3", `出货件数：${context.currentLabel} vs ${context.compareLabel}`);
+    setExecTrendArrow("execT3", qtyGrowth.rate);
+
+    setText("execV4", formatGrowth(mom.rate));
+    setText("execS4", `${context.currentLabel} vs ${context.compareLabel}`);
+    setExecTrendArrow("execT4", mom.rate);
+
+    setText("execV5", "—");
+    setText("execS5", "需接入成本/毛利字段");
+    setExecTrendArrow("execT5", NaN);
+
+    const adRate = totals.amount > 0 && spend > 0 ? spend / totals.amount : null;
+    setText("execV6", adRate != null ? formatPercent(adRate) : "—");
+    setText("execS6", spend > 0 ? `推广费 ${formatMoney(spend)}` : "无推广费或全为 0");
+    const spendMom = spend > 0 && prevSpend > 0 ? calcGrowth(spend, prevSpend) : null;
+    setExecTrendArrow("execT6", spendMom ? spendMom.rate : NaN);
+
+    const roi = spend > 0 ? totals.amount / spend : null;
+    setText("execV7", roi != null ? `${roi.toFixed(2)}×` : "—");
+    setText("execS7", "GMV ÷ 推广费");
+    setExecTrendArrow("execT7", NaN);
+
+    setText("execV8", visitors > 0 ? formatPercent(cvr) : "—");
+    setText("execS8", visitors > 0 ? `订单 ${formatInteger(orders)} / UV ${formatInteger(visitors)}` : "无访客数据");
+    setExecTrendArrow("execT8", prevCvr > 1e-8 ? (cvr - prevCvr) / prevCvr : NaN);
+
+    setText("execV9", formatMoney(aovTraffic));
+    setText("execS9", visitors > 0 ? "GMV / UV" : "GMV / 出货件数");
+    const aovMom = prevAov > 0 && aovTraffic > 0 ? calcGrowth(aovTraffic, prevAov) : null;
+    setExecTrendArrow("execT9", aovMom ? aovMom.rate : NaN);
+
+    renderExecTrendCharts(context);
+    renderExecDiagnosis(context);
+  }
+
   function renderOverview(context) {
-    const { totals, currentTotals, previousTotals, mom, daily } = context;
+    const { daily, currentTotals } = context;
     const latestDays = daily.slice(-7);
 
-    setText("kpiGmv", formatMoney(totals.amount));
-    setText("kpiGmvSub", `${formatInteger(totals.dateCount)} 个有出货日期`);
-    setText("kpiQty", formatInteger(totals.quantity));
-    setText("kpiQtySub", totals.quantity ? `平均每日 ${formatInteger(totals.quantity / Math.max(totals.dateCount, 1))}` : "-");
-    setText("kpiOrders", formatInteger(totals.orderCount));
-    setText("kpiOrdersSub", totals.orderMode);
-    setText("kpiAvgPrice", totals.avgPrice ? formatMoney(totals.avgPrice) : "-");
-    setText("kpiDailyAvg", totals.dailyAvg ? formatMoney(totals.dailyAvg) : "-");
-    setText("kpiDailyAvgSub", latestDays.length ? `最近日期 ${latestDays[latestDays.length - 1].date}` : "-");
-    setText("kpiMom", formatGrowth(mom.rate));
-    setText("kpiMomSub", `${context.currentLabel} vs ${context.compareLabel}，差额 ${formatSignedMoney(mom.delta)}`);
-    setTone(els.kpiMom, mom.delta);
+    renderExecutiveCockpit(context);
 
     const overviewConclusion = buildOverviewConclusion(context);
     setText("overviewConclusion", overviewConclusion);
     renderList(els.overviewInsights, buildOverviewInsights(context));
     setText("monthTrendLabel", `${context.currentLabel}，累计 ${formatMoney(currentTotals.amount)}`);
 
-    renderKpiSparks(context);
     renderOverviewStoryCharts(context);
     renderRecentTrendChart(latestDays);
     renderMonthlyCumulativeChart(context);
@@ -3310,7 +3615,8 @@
   }
 
   function setText(id, value) {
-    if (els[id]) els[id].textContent = value;
+    const el = els[id] || document.getElementById(id);
+    if (el) el.textContent = value;
   }
 
   function setTone(element, delta) {

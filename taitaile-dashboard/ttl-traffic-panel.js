@@ -24,6 +24,7 @@
 
   let pendingCtx = null;
   let rafScheduled = false;
+  let contextBootstrapped = false;
 
   function readNum(v) {
     const n = Number(v);
@@ -520,6 +521,12 @@
     const context = ev && ev.detail && ev.detail.context;
     if (!context) return;
     if (!document.getElementById("ttlTrafficAnalysisPanel")) return;
+    // 首帧同步渲染，避免 requestIdleCallback 排队过久时首屏看不到流量模块数据
+    if (!contextBootstrapped) {
+      contextBootstrapped = true;
+      runUpdate(context);
+      return;
+    }
     schedule(context);
   }
 

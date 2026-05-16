@@ -4,8 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>太太乐全渠道经营驾驶舱</title>
-    <link rel="stylesheet" href="./style.css?v=20260515i" />
-    <link rel="stylesheet" href="./ttl-traffic.css?v=20260515i" />
+    <link rel="stylesheet" href="./style.css?v=20260516b" />
+    <link rel="stylesheet" href="./ttl-traffic.css?v=20260516b" />
+    <link rel="stylesheet" href="./cockpit-layout.css?v=20260516b" />
   </head>
   <body>
     <div class="app-shell">
@@ -56,11 +57,11 @@
           <div>
             <p class="eyebrow">发布版静态经营看板</p>
             <h2>太太乐全渠道经营驾驶舱</h2>
+            <p id="cockpitUpdatedAt" class="cockpit-updated">数据更新时间：—</p>
           </div>
           <div class="header-actions">
             <input id="csvInput" class="publish-hidden" type="file" accept=".csv,text/csv" multiple />
             <button id="reloadDataBtn" class="icon-button publish-hidden" type="button">刷新数据</button>
-            <button id="resetFiltersBtn" class="ghost-button" type="button">重置筛选</button>
             <button id="exportBtn" class="primary-button" type="button" disabled>导出明细</button>
           </div>
         </header>
@@ -83,126 +84,124 @@
           <div id="fieldStatus" class="field-status hidden"></div>
         </section>
 
-        <section class="filter-bar" aria-label="全局筛选">
-          <div class="filter-bar-row filter-bar-row-dates">
-            <div class="filter-field">
+        <section class="filter-bar cockpit-filter-bar" aria-label="全局筛选">
+          <div class="cockpit-filter-row-main">
+            <div class="filter-field cockpit-filter-compact">
               <label for="monthFilter">月份</label>
               <select id="monthFilter" disabled>
                 <option value="all">全部月份</option>
               </select>
             </div>
-            <div class="filter-field">
+            <div class="filter-field cockpit-filter-compact">
               <label for="startDateFilter">开始日期</label>
               <input id="startDateFilter" type="date" disabled />
             </div>
-            <div class="filter-field">
+            <div class="filter-field cockpit-filter-compact">
               <label for="endDateFilter">结束日期</label>
               <input id="endDateFilter" type="date" disabled />
             </div>
-            <div class="filter-field">
-              <label for="compareStartDateFilter">对比开始</label>
-              <input id="compareStartDateFilter" type="date" disabled />
+            <div class="cockpit-compare-inline" aria-label="对比周期">
+              <span class="cockpit-compare-label">对比期</span>
+              <div class="filter-field cockpit-filter-compact">
+                <label for="compareStartDateFilter">对比始</label>
+                <input id="compareStartDateFilter" type="date" disabled />
+              </div>
+              <div class="filter-field cockpit-filter-compact">
+                <label for="compareEndDateFilter">对比末</label>
+                <input id="compareEndDateFilter" type="date" disabled />
+              </div>
             </div>
-            <div class="filter-field">
-              <label for="compareEndDateFilter">对比结束</label>
-              <input id="compareEndDateFilter" type="date" disabled />
+            <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact">
+              <label for="channelFilterTrigger">渠道</label>
+              <div class="multi-dropdown-root">
+                <select id="channelFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="channelFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="channelFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部渠道</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="channelFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+            <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact">
+              <label for="categoryFilterTrigger">品类</label>
+              <div class="multi-dropdown-root">
+                <select id="categoryFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="categoryFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="categoryFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部大类</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="categoryFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+            <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact" id="storeFilterWrap">
+              <label for="storeFilterTrigger">店铺</label>
+              <div class="multi-dropdown-root">
+                <select id="storeFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="storeFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="storeFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部店铺</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="storeFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+            <div class="filter-field filter-field-multi-dropdown cockpit-filter-compact optional-filter hidden" id="regionFilterWrap">
+              <label for="regionFilterTrigger">区域</label>
+              <div class="multi-dropdown-root">
+                <select id="regionFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
+                <button
+                  type="button"
+                  id="regionFilterTrigger"
+                  class="multi-dropdown-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="regionFilterPanel"
+                  disabled
+                >
+                  <span class="multi-dropdown-trigger-text">全部地区</span>
+                  <span class="multi-dropdown-chevron" aria-hidden="true"></span>
+                </button>
+                <div id="regionFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
+              </div>
+            </div>
+            <div class="cockpit-filter-actions">
+              <button id="resetFiltersBtn" class="ghost-button" type="button">重置</button>
+              <button id="cockpitApplyFiltersBtn" type="button" class="primary-button">查询</button>
             </div>
           </div>
-          <div class="filter-bar-row filter-bar-row-dims">
-            <div class="filter-dims-primary-grid" id="filterDimsPrimaryGrid">
-              <div class="filter-field filter-field-multi-dropdown">
-                <label for="channelFilterTrigger">渠道</label>
-                <div class="multi-dropdown-root">
-                  <select id="channelFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
-                  <button
-                    type="button"
-                    id="channelFilterTrigger"
-                    class="multi-dropdown-trigger"
-                    aria-haspopup="listbox"
-                    aria-expanded="false"
-                    aria-controls="channelFilterPanel"
-                    disabled
-                  >
-                    <span class="multi-dropdown-trigger-text">全部渠道</span>
-                    <span class="multi-dropdown-chevron" aria-hidden="true"></span>
-                  </button>
-                  <div id="channelFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
-                </div>
-                <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
-              </div>
-              <div class="filter-field filter-field-multi-dropdown">
-                <label for="categoryFilterTrigger">产品大类</label>
-                <div class="multi-dropdown-root">
-                  <select id="categoryFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
-                  <button
-                    type="button"
-                    id="categoryFilterTrigger"
-                    class="multi-dropdown-trigger"
-                    aria-haspopup="listbox"
-                    aria-expanded="false"
-                    aria-controls="categoryFilterPanel"
-                    disabled
-                  >
-                    <span class="multi-dropdown-trigger-text">全部大类</span>
-                    <span class="multi-dropdown-chevron" aria-hidden="true"></span>
-                  </button>
-                  <div id="categoryFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
-                </div>
-                <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
-              </div>
-              <div class="filter-field filter-field-multi-dropdown" id="storeFilterWrap">
-                <label for="storeFilterTrigger">店铺</label>
-                <div class="multi-dropdown-root">
-                  <select id="storeFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
-                  <button
-                    type="button"
-                    id="storeFilterTrigger"
-                    class="multi-dropdown-trigger"
-                    aria-haspopup="listbox"
-                    aria-expanded="false"
-                    aria-controls="storeFilterPanel"
-                    disabled
-                  >
-                    <span class="multi-dropdown-trigger-text">全部店铺</span>
-                    <span class="multi-dropdown-chevron" aria-hidden="true"></span>
-                  </button>
-                  <div id="storeFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
-                </div>
-                <small class="filter-multi-hint" id="storeFilterHint">可多选；默认「全部」</small>
-              </div>
-              <div class="filter-field filter-field-multi-dropdown optional-filter hidden" id="regionFilterWrap">
-                <label for="regionFilterTrigger">地区</label>
-                <div class="multi-dropdown-root">
-                  <select id="regionFilter" class="multi-dropdown-native" multiple disabled tabindex="-1"></select>
-                  <button
-                    type="button"
-                    id="regionFilterTrigger"
-                    class="multi-dropdown-trigger"
-                    aria-haspopup="listbox"
-                    aria-expanded="false"
-                    aria-controls="regionFilterPanel"
-                    disabled
-                  >
-                    <span class="multi-dropdown-trigger-text">全部地区</span>
-                    <span class="multi-dropdown-chevron" aria-hidden="true"></span>
-                  </button>
-                  <div id="regionFilterPanel" class="multi-dropdown-panel" hidden role="listbox" aria-multiselectable="true"></div>
-                </div>
-                <small class="filter-multi-hint">点击展开，勾选多项；默认「全部」</small>
-              </div>
-              <div class="filter-field search-field filter-field-search-inline">
-                <label for="productSearch">商品搜索</label>
-                <input id="productSearch" type="search" placeholder="输入商品名或编码" disabled />
-                <small class="filter-multi-hint filter-multi-hint--blank" aria-hidden="true">&nbsp;</small>
-              </div>
+          <div class="cockpit-filter-row-secondary">
+            <div class="filter-field search-field filter-field-search-inline">
+              <label for="productSearch">商品搜索</label>
+              <input id="productSearch" type="search" placeholder="商品名或编码" disabled />
             </div>
-            <div class="filter-dims-secondary-row">
-              <div class="filter-field optional-filter hidden" id="brandFilterWrap">
-                <label for="brandFilter">品牌</label>
-                <select id="brandFilter" disabled>
-                  <option value="all">全部品牌</option>
-                </select>
-              </div>
+            <div class="filter-field optional-filter hidden" id="brandFilterWrap">
+              <label for="brandFilter">品牌</label>
+              <select id="brandFilter" disabled>
+                <option value="all">全部品牌</option>
+              </select>
             </div>
           </div>
         </section>
@@ -242,51 +241,108 @@
           </nav>
 
           <section id="overview" class="module-section active">
+            <div class="cockpit-executive" id="cockpitExecutive" aria-label="经营驾驶舱首屏">
+              <div class="cockpit-exec-kpis">
+                <article class="cockpit-exec-card cockpit-exec-card--accent">
+                  <span class="cockpit-exec-label">出货件数（Shipment）</span>
+                  <strong id="execV0" class="cockpit-exec-value">-</strong>
+                  <div id="execS0" class="cockpit-exec-sub">当前筛选周期</div>
+                  <div id="execT0" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card cockpit-exec-card--accent">
+                  <span class="cockpit-exec-label">GMV</span>
+                  <strong id="execV1" class="cockpit-exec-value">-</strong>
+                  <div id="execS1" class="cockpit-exec-sub">出货口径金额</div>
+                  <div id="execT1" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">日均出货</span>
+                  <strong id="execV2" class="cockpit-exec-value">-</strong>
+                  <div id="execS2" class="cockpit-exec-sub">件 / 有数据日</div>
+                  <div id="execT2" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">出货同比（对比期）</span>
+                  <strong id="execV3" class="cockpit-exec-value">-</strong>
+                  <div id="execS3" class="cockpit-exec-sub">件数 vs 对比周期</div>
+                  <div id="execT3" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">GMV 环比</span>
+                  <strong id="execV4" class="cockpit-exec-value">-</strong>
+                  <div id="execS4" class="cockpit-exec-sub">对上一对比窗口</div>
+                  <div id="execT4" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">毛利率</span>
+                  <strong id="execV5" class="cockpit-exec-value">-</strong>
+                  <div id="execS5" class="cockpit-exec-sub">需成本表接入</div>
+                  <div id="execT5" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">广告费率</span>
+                  <strong id="execV6" class="cockpit-exec-value">-</strong>
+                  <div id="execS6" class="cockpit-exec-sub">推广费 / GMV</div>
+                  <div id="execT6" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">ROI</span>
+                  <strong id="execV7" class="cockpit-exec-value">-</strong>
+                  <div id="execS7" class="cockpit-exec-sub">GMV / 推广费</div>
+                  <div id="execT7" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">转化率（订单/访客）</span>
+                  <strong id="execV8" class="cockpit-exec-value">-</strong>
+                  <div id="execS8" class="cockpit-exec-sub">访客来自可选运营字段</div>
+                  <div id="execT8" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+                <article class="cockpit-exec-card">
+                  <span class="cockpit-exec-label">客单价（GMV/访客）</span>
+                  <strong id="execV9" class="cockpit-exec-value">-</strong>
+                  <div id="execS9" class="cockpit-exec-sub">无访客时退化为 GMV/件</div>
+                  <div id="execT9" class="cockpit-exec-trend cockpit-exec-trend--flat">—</div>
+                </article>
+              </div>
+
+              <div class="cockpit-exec-trends">
+                <article class="cockpit-exec-trend-card">
+                  <h4>出货趋势（近 30 日）</h4>
+                  <p class="cockpit-exec-trend-hint">实线本期 · 虚线对比期（按日历对齐）</p>
+                  <div id="execTrendShipment" class="cockpit-exec-chart"></div>
+                </article>
+                <article class="cockpit-exec-trend-card">
+                  <h4>GMV 趋势（近 30 日）</h4>
+                  <p class="cockpit-exec-trend-hint">支持对比周期参考线</p>
+                  <div id="execTrendGmv" class="cockpit-exec-chart"></div>
+                </article>
+                <article class="cockpit-exec-trend-card">
+                  <h4>流量趋势（UV）</h4>
+                  <p class="cockpit-exec-trend-hint">访客为 0 时显示占位</p>
+                  <div id="execTrendUv" class="cockpit-exec-chart"></div>
+                </article>
+                <article class="cockpit-exec-trend-card">
+                  <h4>转化率趋势</h4>
+                  <p class="cockpit-exec-trend-hint">订单量 ÷ 访客（按日）</p>
+                  <div id="execTrendCvr" class="cockpit-exec-chart"></div>
+                </article>
+              </div>
+
+              <div class="cockpit-exec-diagnosis">
+                <h4>经营诊断（本周期 vs 对比期）</h4>
+                <ul id="execDiagnosisList"></ul>
+                <p class="cockpit-exec-formula">
+                  GMV 变化可近似分解为：流量（UV）× 转化率（CVR）× 客单价（AOV）；下列 3 条为规则引擎结论，用于快速定位问题域。
+                </p>
+              </div>
+            </div>
+
             <div class="section-head">
               <div>
                 <p class="eyebrow">Overview</p>
                 <h3>经营总览</h3>
               </div>
               <p id="overviewConclusion" class="section-conclusion">-</p>
-            </div>
-
-            <div class="kpi-grid">
-              <article class="kpi-card">
-                <span class="kpi-label">累计 GMV</span>
-                <strong id="kpiGmv">-</strong>
-                <small id="kpiGmvSub">-</small>
-                <div id="sparkGmvChart" class="kpi-spark"></div>
-              </article>
-              <article class="kpi-card">
-                <span class="kpi-label">累计出货数量</span>
-                <strong id="kpiQty">-</strong>
-                <small id="kpiQtySub">-</small>
-                <div id="sparkQtyChart" class="kpi-spark"></div>
-              </article>
-              <article class="kpi-card">
-                <span class="kpi-label">订单 / 发货单数</span>
-                <strong id="kpiOrders">-</strong>
-                <small id="kpiOrdersSub">-</small>
-                <div id="sparkOrderChart" class="kpi-spark"></div>
-              </article>
-              <article class="kpi-card">
-                <span class="kpi-label">平均单价</span>
-                <strong id="kpiAvgPrice">-</strong>
-                <small>GMV / 出货数量</small>
-                <div id="sparkAvgPriceChart" class="kpi-spark"></div>
-              </article>
-              <article class="kpi-card">
-                <span class="kpi-label">日均 GMV</span>
-                <strong id="kpiDailyAvg">-</strong>
-                <small id="kpiDailyAvgSub">-</small>
-                <div id="sparkDailyAvgChart" class="kpi-spark"></div>
-              </article>
-              <article class="kpi-card">
-                <span class="kpi-label">当前周期 vs 对比周期</span>
-                <strong id="kpiMom">-</strong>
-                <small id="kpiMomSub">-</small>
-                <div id="sparkMomChart" class="kpi-spark"></div>
-              </article>
             </div>
 
             <div class="overview-story-grid">
@@ -363,12 +419,12 @@
               <ul id="overviewInsights" class="insight-list"></ul>
             </article>
 
-            <div id="ttlTrafficAnalysisPanel" class="ttl-traffic ttl-traffic--root" aria-label="流量转化经营分析">
+                        <div id="ttlTrafficAnalysisPanel" class="ttl-traffic ttl-traffic--root" aria-label="流量转化经营分析">
               <div class="ttl-traffic__head">
                 <div>
                   <h3 class="ttl-traffic__title">流量转化经营分析</h3>
                   <p class="ttl-traffic__sub">
-                    与上方「经营总览」出货看板同筛选上下文；GMV 分解 GMV ≈ UV × CVR × AOV（口径随数据完整度变化）。
+                    与本页经营总览 KPI 及出货图表同筛选上下文；GMV 分解 GMV ≈ UV × CVR × AOV（口径随数据完整度变化）。
                   </p>
                 </div>
                 <span id="ttlTrafficDataBadge" class="ttl-traffic__badge ttl-traffic__badge--stub">数据加载中</span>
@@ -809,8 +865,8 @@
       crossorigin="anonymous"
       onerror="this.onerror=null;this.src='./papaparse.min.js'"
     ></script>
-    <script src="./data-bundle.js?v=20260515f"></script>
-    <script src="./script.js?v=20260515i"></script>
-    <script src="./ttl-traffic-panel.js?v=20260515i"></script>
+    <script src="./data-bundle.js?v=20260516b"></script>
+    <script src="./script.js?v=20260516b"></script>
+    <script src="./ttl-traffic-panel.js?v=20260516b"></script>
   </body>
 </html>
