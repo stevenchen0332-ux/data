@@ -21,6 +21,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -93,8 +94,43 @@ def run(cmd: list[str], env: dict | None = None) -> None:
     subprocess.run(cmd, cwd=ROOT, check=True, env=merged)
 
 
-def run_git(cmd: list[str], cfg: dict) -> None:
-    run(cmd, env=git_author_env(cfg))
+def run_git(cmd: list[str], cfg: dict, check: bool = True) -> subprocess.CompletedProcess:
+    print("$", " ".join(cmd))
+    merged = {**os.environ.copy(), **git_author_env(cfg)}
+    return subprocess.run(cmd, cwd=ROOT, check=check, env=merged)
+
+
+def run_git_retry(cmd: list[str], cfg: dict, retries: int = 3, delay: int = 12) -> None:
+    last: subprocess.CalledProcessError | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            run_git(cmd, cfg)
+            return
+        except subprocess.CalledProcessError as exc:
+            last = exc
+            if attempt < retries:
+                print(f"Git 失败，{delay}s 后重试 ({attempt}/{retries})…")
+                time.sleep(delay)
+    if last:
+        raise last
+
+
+def current_branch() -> str:
+    proc = subprocess.run(
+        ["git", "branch", "--show-current"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return proc.stdout.strip()
+
+
+def ensure_on_main(cfg: dict) -> None:
+    branch = current_branch()
+    if branch != "main":
+        print(f"当前在 {branch}，切换到 main …")
+        run_git(["git", "checkout", "main"], cfg)
 
 
 def bump_cache_version(cfg: dict) -> str:
@@ -131,7 +167,9 @@ def mirror_outputs(cfg: dict, bundle: Path, traffic: Path) -> None:
             shutil.copy2(src, dest / name)
 
 
-def git_publish(cfg: dict, stamp: str) -> None:
+def git_publish(cfg: dict, stamp: str) -> str:
+    """返回 ok | no_changes | push_failed"""
+    ensure_on_main(cfg)
     msg = cfg.get("commitMessage") or f"data: 自动刷新 {stamp or datetime.now().strftime('%Y-%m-%d %H:%M')}"
     files = [
         "data-bundle.js",
@@ -156,15 +194,35 @@ def git_publish(cfg: dict, stamp: str) -> None:
     )
     if status.returncode == 0:
         print("无数据变更，跳过提交。")
-        return
+        return "no_changes"
 
     run_git(["git", "commit", "-m", msg], cfg)
-    run_git(["git", "push", "origin", "main"], cfg)
-    run_git(["git", "checkout", "gh-pages"], cfg)
-    run_git(["git", "reset", "--hard", "main"], cfg)
-    run_git(["git", "push", "origin", "gh-pages", "--force"], cfg)
-    run_git(["git", "checkout", "main"], cfg)
+    print("本地提交已完成，正在推送到 GitHub …")
+
+    try:
+        run_git_retry(["git", "push", "origin", "main"], cfg)
+        run_git(["git", "checkout", "gh-pages"], cfg)
+        run_git(["git", "reset", "--hard", "main"], cfg)
+        run_git_retry(["git", "push", "origin", "gh-pages", "--force"], cfg)
+        run_git(["git", "checkout", "main"], cfg)
+    except subprocess.CalledProcessError:
+        print("")
+        print("=" * 50)
+        print("⚠️  数据已在本地更新并提交，但推送到 GitHub 失败。")
+        print("    常见原因：无法连接 github.com（网络/VPN/防火墙）。")
+        print("")
+        print("    本地预览仍可用：http://127.0.0.1:8765")
+        print("    网络恢复后在本机终端执行：")
+        print("      cd /tmp/data-deploy && ./scripts/push_only.sh")
+        print("=" * 50)
+        try:
+            run_git(["git", "checkout", "main"], cfg, check=False)
+        except Exception:
+            pass
+        return "push_failed"
+
     print("已推送到 main 与 gh-pages，约 1～3 分钟后线上生效。")
+    return "ok"
 
 
 def main() -> None:
@@ -202,7 +260,9 @@ def main() -> None:
 
     publish = cfg.get("publish", True) and not args.no_publish
     if publish and os.environ.get("GITHUB_ACTIONS") != "true":
-        git_publish(cfg, stamp)
+        result = git_publish(cfg, stamp)
+        if result == "push_failed":
+            raise SystemExit(2)
     elif publish and os.environ.get("GITHUB_ACTIONS") == "true":
         print("CI 模式：请在 workflow 中单独执行 git commit / push。")
 
