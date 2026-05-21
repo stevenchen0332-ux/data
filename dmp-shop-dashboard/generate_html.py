@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -92,6 +93,7 @@ def _scatter(daily: pd.DataFrame, shop: pd.DataFrame) -> go.Figure:
 
 
 def build_html(daily: pd.DataFrame, shop: pd.DataFrame, insights: list[str]) -> str:
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     daily_json = daily.copy()
     daily_json["日期"] = daily_json["日期"].dt.strftime("%Y-%m-%d")
     payload = {
@@ -225,7 +227,10 @@ def build_html(daily: pd.DataFrame, shop: pd.DataFrame, insights: list[str]) -> 
     </div>
     <button class="btn" onclick="applyFilter()">应用筛选</button>
     <button class="btn" style="background:#64748b" onclick="resetFilter()">重置</button>
+    <button class="btn" style="background:#0f766e" onclick="refreshOnline()">刷新线上数据</button>
   </div>
+
+  <p class="note">最后生成：{generated_at}。数据文件更新后，运行「一键刷新线上看板.command」发布；发布完成后点击“刷新线上数据”或重新打开页面。</p>
 
   <div class="kpi-grid" id="kpiGrid">
     <div class="kpi"><div class="label">总销售额</div><div class="val" id="kpiSales">¥{fmt_int(total_sales)}</div></div>
@@ -428,6 +433,12 @@ function resetFilter() {{
   filterShopList();
   updateShopTriggerText();
   applyFilter();
+}}
+
+function refreshOnline() {{
+  const url = new URL(window.location.href);
+  url.searchParams.set('v', Date.now().toString());
+  window.location.href = url.toString();
 }}
 
 function exportCsv(type) {{

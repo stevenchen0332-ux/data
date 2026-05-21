@@ -50,16 +50,30 @@ chmod +x build.sh
 
 **在线地址：** https://stevenchen0332-ux.github.io/data/dmp-shop-dashboard/
 
-### 一键发布（推荐）
+### 一键刷新线上看板（推荐）
 
-更新 Excel 后，在终端执行：
+更新 Excel 后，双击：
+
+```text
+一键刷新线上看板.command
+```
+
+脚本会自动完成：
+
+1. 读取最新 `店铺销售.xls`、`店铺推广.xls`
+2. 重新生成 `dashboard.html`
+3. 推送到 `stevenchen0332-ux/data`
+4. 同步 GitHub Pages
+5. 自动打开线上看板
+
+线上页面打开后，如果浏览器缓存旧页面，点击看板上的 **刷新线上数据** 按钮即可带缓存参数重新载入。
+
+也可以在终端执行：
 
 ```bash
 cd "/Users/chenjiwei/Desktop/太太乐/dmp数据"
 ./push_to_github.sh
 ```
-
-脚本会自动：`build.py` 生成看板 → 推送到 `stevenchen0332-ux/data` → 同步 `gh-pages`。
 
 若网络不稳定可多执行一次。
 
