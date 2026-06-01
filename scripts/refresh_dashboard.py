@@ -136,7 +136,7 @@ def ensure_on_main(cfg: dict) -> None:
 def bump_cache_version(cfg: dict) -> str:
     if not cfg.get("bumpCacheOnRefresh", True):
         return ""
-    stamp = datetime.now().strftime("%Y%m%d%H")
+    stamp = datetime.now().strftime("%Y%m%d%H%M")
     tag = f"v={stamp}"
     targets = [ROOT / "index.html"]
     mirror = cfg.get("mirrorSubdir")
