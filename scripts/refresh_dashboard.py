@@ -213,7 +213,7 @@ def git_publish(cfg: dict, stamp: str) -> str:
         print("")
         print("    本地预览仍可用：http://127.0.0.1:8765")
         print("    网络恢复后在本机终端执行：")
-        print("      cd /tmp/data-deploy && ./scripts/push_only.sh")
+        print("      cd /Users/chenjiwei/Desktop/analysis.R/data-pages && ./scripts/push_only.sh")
         print("=" * 50)
         try:
             run_git(["git", "checkout", "main"], cfg, check=False)
